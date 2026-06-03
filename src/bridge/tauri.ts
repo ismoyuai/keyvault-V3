@@ -62,7 +62,7 @@ export const vault = {
   createEntry: (input: CreateEntryInput) =>
     invoke<string>('create_entry', { sessionToken: getToken(), input }),
 
-  updateEntry: (entryId: string, input: Partial<CreateEntryInput>) =>
+  updateEntry: (entryId: string, input: CreateEntryInput) =>
     invoke<void>('update_entry', { sessionToken: getToken(), entryId, input }),
 
   deleteEntry: (entryId: string) =>
