@@ -73,6 +73,12 @@ export const vault = {
 
   searchEntries: (query: string) =>
     invoke<EntryMeta[]>('search_entries', { sessionToken: getToken(), query }),
+
+  exportVault: (format: string) =>
+    invoke<string>('export_vault', { sessionToken: getToken(), format }),
+
+  importVault: (data: string, format: string) =>
+    invoke<number>('import_vault', { sessionToken: getToken(), data, format }),
 }
 
 // ============================================
