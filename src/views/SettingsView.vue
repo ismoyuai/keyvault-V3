@@ -1,0 +1,163 @@
+<script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
+
+const router = useRouter()
+const auth = useAuthStore()
+const settings = useSettingsStore()
+
+async function handleLock() {
+  await auth.lock()
+  router.push('/login')
+}
+</script>
+
+<template>
+  <div class="settings-view">
+    <div class="settings-header">
+      <button class="back-btn" @click="router.push('/vault')">← 返回</button>
+      <h1>设置</h1>
+    </div>
+
+    <div class="settings-body">
+      <section class="settings-section">
+        <h2 class="section-title">安全</h2>
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="label-text">自动锁定</span>
+            <span class="label-hint">空闲后自动锁定（分钟）</span>
+          </div>
+          <select v-model="settings.autoLockMinutes" class="setting-select">
+            <option :value="5">5 分钟</option>
+            <option :value="15">15 分钟</option>
+            <option :value="30">30 分钟</option>
+            <option :value="60">60 分钟</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="label-text">剪贴板自动清空</span>
+            <span class="label-hint">复制后自动清空（秒）</span>
+          </div>
+          <select v-model="settings.clipboardClearSeconds" class="setting-select">
+            <option :value="10">10 秒</option>
+            <option :value="30">30 秒</option>
+            <option :value="60">60 秒</option>
+            <option :value="0">禁用</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="section-title">关于</h2>
+        <div class="setting-row">
+          <span class="label-text">版本</span>
+          <span class="label-hint">3.0.0</span>
+        </div>
+      </section>
+
+      <div class="settings-actions">
+        <button class="btn-danger" @click="handleLock">锁定</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.settings-view {
+  height: 100vh;
+  background: var(--bg-base);
+  overflow-y: auto;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.settings-header h1 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.back-btn {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.back-btn:hover {
+  color: var(--text-accent);
+}
+
+.settings-body {
+  padding: var(--space-5);
+  max-width: 600px;
+}
+
+.settings-section {
+  margin-bottom: var(--space-6);
+}
+
+.section-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-4);
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.setting-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label-text {
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}
+
+.label-hint {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.setting-select {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.settings-actions {
+  margin-top: var(--space-8);
+}
+
+.btn-danger {
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-danger);
+  color: #fff;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.btn-danger:hover {
+  opacity: 0.9;
+}
+</style>

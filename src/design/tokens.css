@@ -1,0 +1,126 @@
+:root {
+  /* ============================================
+   * 核心调色板：暗黑为唯一主题
+   * 参考：Warp Terminal / GitHub Dark Dimmed
+   * ============================================ */
+
+  /* 背景层次（从深到浅，5层） */
+  --bg-base:       #0d1117;
+  --bg-surface:    #161b22;
+  --bg-elevated:   #1c2128;
+  --bg-overlay:    #22272e;
+  --bg-input:      #2d333b;
+
+  /* 边框 */
+  --border-subtle:  rgba(255,255,255,0.05);
+  --border-default: rgba(255,255,255,0.10);
+  --border-strong:  rgba(255,255,255,0.20);
+  --border-accent:  #388bfd;
+
+  /* 文字层次 */
+  --text-primary:   #e6edf3;
+  --text-secondary: #8b949e;
+  --text-tertiary:  #484f58;
+  --text-disabled:  #30363d;
+  --text-accent:    #79c0ff;
+  --text-danger:    #f85149;
+  --text-success:   #3fb950;
+  --text-warning:   #d29922;
+
+  /* 品牌色 */
+  --accent-blue:    #388bfd;
+  --accent-blue-dim: rgba(56, 139, 253, 0.15);
+  --accent-blue-glow: rgba(56, 139, 253, 0.08);
+
+  /* 语义色 */
+  --color-success: #3fb950;
+  --color-danger:  #f85149;
+  --color-warning: #d29922;
+  --color-info:    #79c0ff;
+
+  /* 条目类型色（低饱和度图标背景） */
+  --type-login:    rgba(56,  139, 253, 0.15);
+  --type-api:      rgba(210, 153,  34, 0.15);
+  --type-ssh:      rgba(63,  185,  80, 0.15);
+  --type-server:   rgba(188, 140, 255, 0.15);
+  --type-note:     rgba(139, 148, 158, 0.15);
+  --type-card:     rgba(248,  81,  73, 0.15);
+  --type-identity: rgba(255, 166,  87, 0.15);
+  --type-crypto:   rgba(86,  211, 255, 0.15);
+  --type-license:  rgba(63,  185,  80, 0.15);
+  --type-custom:   rgba(139, 148, 158, 0.15);
+
+  /* ============================================
+   * 字体系统
+   * ============================================ */
+  --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+
+  --text-xs:   11px;
+  --text-sm:   12px;
+  --text-base: 13px;
+  --text-md:   14px;
+  --text-lg:   16px;
+  --text-xl:   20px;
+  --text-2xl:  24px;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+
+  /* ============================================
+   * 间距（紧凑系统）
+   * ============================================ */
+  --space-1:  3px;
+  --space-2:  6px;
+  --space-3:  8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 20px;
+  --space-8: 28px;
+  --space-10: 36px;
+  --space-12: 48px;
+
+  /* ============================================
+   * 圆角
+   * ============================================ */
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg:  8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* ============================================
+   * 布局尺寸
+   * ============================================ */
+  --titlebar-height:     30px;
+  --sidebar-width:      200px;
+  --list-item-height:    52px;
+  --detail-panel-width: 360px;
+
+  /* ============================================
+   * 动画
+   * ============================================ */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast:  120ms;
+  --duration-base:  200ms;
+  --duration-slow:  300ms;
+
+  /* ============================================
+   * 阴影
+   * ============================================ */
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg:  0 8px 24px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 20px rgba(56,139,253,0.15);
+
+  /* ============================================
+   * Z-index 层级
+   * ============================================ */
+  --z-sidebar:   10;
+  --z-titlebar:  20;
+  --z-overlay:   30;
+  --z-modal:     40;
+  --z-toast:     50;
+  --z-palette:   60;
+}
