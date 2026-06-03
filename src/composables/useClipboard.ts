@@ -26,8 +26,8 @@ export function useClipboard() {
     return seconds
   }
 
-  function clearClipboard() {
-    clipboard.clear()
+  async function clearClipboard() {
+    await clipboard.clear()
     copiedField.value = null
     if (timer.value) {
       clearTimeout(timer.value)
