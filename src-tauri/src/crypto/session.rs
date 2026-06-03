@@ -70,3 +70,50 @@ impl Default for SessionManager {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_create_and_validate() {
+        let mgr = SessionManager::new();
+        let token = mgr.create().await;
+        assert!(mgr.validate(&token).await);
+    }
+
+    #[tokio::test]
+    async fn test_validate_invalid_token() {
+        let mgr = SessionManager::new();
+        assert!(!mgr.validate("nonexistent").await);
+    }
+
+    #[tokio::test]
+    async fn test_destroy_all() {
+        let mgr = SessionManager::new();
+        let token = mgr.create().await;
+        assert!(mgr.validate(&token).await);
+        mgr.destroy_all().await;
+        assert!(!mgr.validate(&token).await);
+    }
+
+    #[tokio::test]
+    async fn test_sliding_window_refresh() {
+        let mgr = SessionManager::new();
+        let token = mgr.create().await;
+        // Validate multiple times — each should succeed and refresh
+        assert!(mgr.validate(&token).await);
+        assert!(mgr.validate(&token).await);
+        assert!(mgr.validate(&token).await);
+    }
+
+    #[tokio::test]
+    async fn test_multiple_sessions() {
+        let mgr = SessionManager::new();
+        let token1 = mgr.create().await;
+        let token2 = mgr.create().await;
+        assert_ne!(token1, token2);
+        assert!(mgr.validate(&token1).await);
+        assert!(mgr.validate(&token2).await);
+    }
+}
