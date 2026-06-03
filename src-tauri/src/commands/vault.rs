@@ -5,6 +5,16 @@ use crate::crypto::cipher;
 use crate::db::queries;
 use crate::state::AppState;
 
+/// 审计日志写入（失败静默忽略，不阻塞主操作）
+macro_rules! audit_log {
+    ($db:expr, $action:expr, $entry_id:expr, $field_key:expr, $metadata:expr) => {
+        let _ = queries::write_audit_log($db, $action, $entry_id, $field_key, $metadata).await;
+    };
+    ($db:expr, $action:expr, $entry_id:expr) => {
+        audit_log!($db, $action, $entry_id, None, None);
+    };
+}
+
 #[derive(Serialize)]
 pub struct EntryMeta {
     pub id: String,
@@ -157,6 +167,9 @@ pub async fn get_entry_secrets(
             is_sensitive: row.is_sensitive != 0,
         });
     }
+
+    // 审计日志：查看条目
+    audit_log!(&state.db, "view", Some(&entry_id));
 
     Ok(EntrySecrets { fields })
 }
@@ -351,6 +364,9 @@ pub async fn delete_entry(
             tracing::error!("操作失败: {:?}", e);
             "操作失败，请重试".to_string()
         })?;
+
+    // 审计日志：删除条目
+    audit_log!(&state.db, "delete", Some(&entry_id));
 
     Ok(())
 }

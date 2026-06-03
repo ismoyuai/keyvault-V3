@@ -4,6 +4,16 @@ use crate::crypto::kdf;
 use crate::db::queries;
 use crate::state::AppState;
 
+/// 审计日志写入（失败静默忽略，不阻塞主操作）
+macro_rules! audit_log {
+    ($db:expr, $action:expr, $entry_id:expr, $field_key:expr, $metadata:expr) => {
+        let _ = queries::write_audit_log($db, $action, $entry_id, $field_key, $metadata).await;
+    };
+    ($db:expr, $action:expr) => {
+        audit_log!($db, $action, None, None, None);
+    };
+}
+
 #[tauri::command]
 pub async fn is_initialized(state: State<'_, AppState>) -> Result<bool, String> {
     let result = queries::get_config(&state.db, "password_hash")
@@ -51,6 +61,10 @@ pub async fn setup(password: String, state: State<'_, AppState>) -> Result<Strin
 
     // 6. 创建会话
     let token = state.sessions.create().await;
+
+    // 7. 审计日志
+    audit_log!(&state.db, "setup");
+
     Ok(token)
 }
 
@@ -110,11 +124,18 @@ pub async fn unlock(password: String, state: State<'_, AppState>) -> Result<Stri
 
     // 6. 创建会话
     let token = state.sessions.create().await;
+
+    // 7. 审计日志
+    audit_log!(&state.db, "unlock");
+
     Ok(token)
 }
 
 #[tauri::command]
 pub async fn lock(state: State<'_, AppState>) -> Result<(), String> {
+    // 审计日志（在锁定前写入，因为锁定后 db 可能不可用）
+    audit_log!(&state.db, "lock");
+
     state.lock().await;
     Ok(())
 }
@@ -220,6 +241,9 @@ pub async fn change_password(
     // 更新内存中的密钥
     *state.encryption_key.write().await = Some(new_key);
     *state.kdf_salt.write().await = Some(Zeroizing::new(new_salt));
+
+    // 审计日志
+    audit_log!(&state.db, "change_password");
 
     Ok(())
 }
