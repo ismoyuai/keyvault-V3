@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 import { useToast } from '@/composables/useToast'
+import { security, vault as vaultBridge } from '@/bridge/tauri'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -42,6 +43,43 @@ async function handleChangePassword() {
     toast.error(e.message || '修改失败')
   } finally {
     changingPassword.value = false
+  }
+}
+
+const checkPassword = ref('')
+const breachResult = ref<string | null>(null)
+const checkingBreach = ref(false)
+
+async function handleBreachCheck() {
+  if (!checkPassword.value) return
+  checkingBreach.value = true
+  breachResult.value = null
+  try {
+    const result = await security.checkBreach(checkPassword.value)
+    breachResult.value = result.breached
+      ? `该密码已泄露 ${result.count.toLocaleString()} 次`
+      : '该密码未在已知泄露数据库中'
+  } catch (e: any) {
+    breachResult.value = '检测失败: ' + (e.message || '未知错误')
+  } finally {
+    checkingBreach.value = false
+  }
+}
+
+async function handleExport() {
+  try {
+    const data = await vaultBridge.exportVault('json')
+    const { save } = await import('@tauri-apps/plugin-dialog')
+    const path = await save({
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    })
+    if (path) {
+      const { writeTextFile } = await import('@tauri-apps/plugin-fs')
+      await writeTextFile(path, data)
+      toast.success('导出成功')
+    }
+  } catch (e: any) {
+    toast.error(e.message || '导出失败')
   }
 }
 </script>
@@ -117,6 +155,28 @@ async function handleChangePassword() {
             {{ changingPassword ? '修改中...' : '确认修改' }}
           </button>
         </div>
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="label-text">密码泄露检测</span>
+            <span class="label-hint">检查密码是否在已知泄露数据库中</span>
+          </div>
+        </div>
+        <div class="breach-check-form">
+          <input
+            v-model="checkPassword"
+            type="password"
+            placeholder="输入要检测的密码"
+            class="password-input"
+          />
+          <button
+            class="btn-secondary"
+            :disabled="checkingBreach"
+            @click="handleBreachCheck"
+          >
+            {{ checkingBreach ? '检测中...' : '检测' }}
+          </button>
+          <p v-if="breachResult" class="breach-result">{{ breachResult }}</p>
+        </div>
       </section>
 
       <section class="settings-section">
@@ -124,6 +184,17 @@ async function handleChangePassword() {
         <div class="setting-row">
           <span class="label-text">版本</span>
           <span class="label-hint">3.0.0</span>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="section-title">数据</h2>
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="label-text">导出密码库</span>
+            <span class="label-hint">导出为 JSON 文件</span>
+          </div>
+          <button class="btn-secondary" @click="handleExport">导出</button>
         </div>
       </section>
 
@@ -282,5 +353,19 @@ async function handleChangePassword() {
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.breach-check-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  align-items: center;
+}
+
+.breach-result {
+  width: 100%;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 </style>
