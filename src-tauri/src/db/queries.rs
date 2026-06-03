@@ -16,11 +16,13 @@ pub async fn list_entries(pool: &SqlitePool) -> Result<Vec<EntryMeta>, sqlx::Err
 }
 
 pub async fn search_entries(pool: &SqlitePool, query: &str) -> Result<Vec<EntryMeta>, sqlx::Error> {
-    let pattern = format!("%{}%", query);
+    // 转义 LIKE 通配符
+    let escaped = query.replace('%', "\\%").replace('_', "\\_");
+    let pattern = format!("%{}%", escaped);
     sqlx::query_as::<_, EntryMeta>(
         "SELECT id, entry_type, title, subtitle, tags, favorited, group_id, updated_at
          FROM entries
-         WHERE title LIKE ?1 OR subtitle LIKE ?1 OR tags LIKE ?1
+         WHERE title LIKE ?1 ESCAPE '\\' OR subtitle LIKE ?1 ESCAPE '\\' OR tags LIKE ?1 ESCAPE '\\'
          ORDER BY favorited DESC, updated_at DESC",
     )
     .bind(&pattern)
