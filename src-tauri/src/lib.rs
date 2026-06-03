@@ -54,6 +54,8 @@ pub fn run() {
             commands::auth::unlock,
             commands::auth::lock,
             commands::auth::change_password,
+            commands::export_cmd::export_vault,
+            commands::export_cmd::import_vault,
             commands::vault::list_entries,
             commands::vault::search_entries,
             commands::vault::get_entry_secrets,
