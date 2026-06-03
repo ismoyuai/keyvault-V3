@@ -83,6 +83,18 @@ async function handleMessage(message, sender) {
     case 'SEARCH':
       return await sendToNative('search', { query: message.query });
 
+    case 'CHECK_SAVE':
+      // Always offer to save for now (could check if already saved)
+      return { shouldSave: true };
+
+    case 'SAVE_CREDENTIAL':
+      return await sendToNative('save_credential', {
+        url: message.url,
+        username: message.username,
+        password: message.password,
+        title: message.title,
+      });
+
     default:
       throw new Error(`未知操作: ${message.action}`);
   }
