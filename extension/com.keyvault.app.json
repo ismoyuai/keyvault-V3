@@ -1,0 +1,7 @@
+{
+  "name": "com.keyvault.app",
+  "description": "KeyVault Native Messaging Host",
+  "path": "",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://PLACEHOLDER_EXTENSION_ID/"]
+}
