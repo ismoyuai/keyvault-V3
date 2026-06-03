@@ -14,7 +14,7 @@ interface ShortcutHandler {
 export function useShortcuts(handlers: ShortcutHandler[]) {
   function handleKeydown(e: KeyboardEvent) {
     for (const h of handlers) {
-      const ctrlMatch = h.ctrl ? (e.ctrlKey || e.metaKey) : true
+      const ctrlMatch = h.ctrl ? (e.ctrlKey || e.metaKey) : h.meta ? e.metaKey : true
       const shiftMatch = h.shift ? e.shiftKey : true
       const keyMatch = e.key.toLowerCase() === h.key.toLowerCase()
 
