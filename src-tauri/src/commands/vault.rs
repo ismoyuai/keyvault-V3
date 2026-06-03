@@ -92,7 +92,10 @@ pub async fn list_entries(
 
     let rows = queries::list_entries(&state.db, 100, 0)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
 
     Ok(rows.into_iter().map(row_to_meta).collect())
 }
@@ -110,7 +113,10 @@ pub async fn search_entries(
 
     let rows = queries::search_entries(&state.db, &query)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
 
     Ok(rows.into_iter().map(row_to_meta).collect())
 }
@@ -131,11 +137,17 @@ pub async fn get_entry_secrets(
 
     let rows = queries::get_entry_fields(&state.db, &entry_id)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
 
     let mut fields = Vec::new();
     for row in rows {
-        let decrypted = cipher::decrypt_field(key, &row.enc_value).map_err(|e| e.to_string())?;
+        let decrypted = cipher::decrypt_field(key, &row.enc_value).map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
         let value =
             String::from_utf8(decrypted.to_vec()).map_err(|_| "解码失败".to_string())?;
         fields.push(DecryptedField {
@@ -182,12 +194,18 @@ pub async fn create_entry(
     .bind(now)
     .execute(&state.db)
     .await
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| {
+        tracing::error!("操作失败: {:?}", e);
+        "操作失败，请重试".to_string()
+    })?;
 
     // 插入加密字段
     for (i, field) in input.fields.iter().enumerate() {
         let enc_value =
-            cipher::encrypt_field(key, field.value.as_bytes()).map_err(|e| e.to_string())?;
+            cipher::encrypt_field(key, field.value.as_bytes()).map_err(|e| {
+                tracing::error!("操作失败: {:?}", e);
+                "操作失败，请重试".to_string()
+            })?;
         let field_id = uuid::Uuid::new_v4().to_string();
 
         sqlx::query(
@@ -203,7 +221,10 @@ pub async fn create_entry(
         .bind(i as i32)
         .execute(&state.db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
     }
 
     Ok(entry_id)
@@ -241,7 +262,10 @@ pub async fn update_entry(
     .bind(&entry_id)
     .execute(&state.db)
     .await
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| {
+        tracing::error!("操作失败: {:?}", e);
+        "操作失败，请重试".to_string()
+    })?;
 
     // 先查询旧字段用于保存历史
     let old_fields = queries::get_entry_fields(&state.db, &entry_id)
@@ -253,7 +277,10 @@ pub async fn update_entry(
         .bind(&entry_id)
         .execute(&state.db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
 
     // 插入新字段并保存历史
     for (i, field) in input.fields.iter().enumerate() {
@@ -277,7 +304,10 @@ pub async fn update_entry(
         }
 
         let enc_value =
-            cipher::encrypt_field(key, field.value.as_bytes()).map_err(|e| e.to_string())?;
+            cipher::encrypt_field(key, field.value.as_bytes()).map_err(|e| {
+                tracing::error!("操作失败: {:?}", e);
+                "操作失败，请重试".to_string()
+            })?;
         let field_id = uuid::Uuid::new_v4().to_string();
 
         sqlx::query(
@@ -293,7 +323,10 @@ pub async fn update_entry(
         .bind(i as i32)
         .execute(&state.db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
     }
 
     Ok(())
@@ -314,7 +347,10 @@ pub async fn delete_entry(
         .bind(&entry_id)
         .execute(&state.db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
 
     Ok(())
 }
@@ -334,7 +370,10 @@ pub async fn toggle_favorite(
         .bind(&entry_id)
         .execute(&state.db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
 
     Ok(())
 }
