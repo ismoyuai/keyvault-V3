@@ -138,9 +138,12 @@ pub async fn change_password(
     rand::thread_rng().fill_bytes(&mut new_salt);
     let new_key = kdf::derive_key(&new_bytes, &new_salt).map_err(|e| e.to_string())?;
 
+    // 在事务中执行所有数据库操作
+    let mut tx = state.db.begin().await.map_err(|e| e.to_string())?;
+
     // 重新加密所有字段
     let fields = sqlx::query_as::<_, (String, String)>("SELECT id, enc_value FROM fields")
-        .fetch_all(&state.db)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -152,14 +155,14 @@ pub async fn change_password(
         sqlx::query("UPDATE fields SET enc_value = ? WHERE id = ?")
             .bind(&new_enc)
             .bind(&id)
-            .execute(&state.db)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
     }
 
     // 重新加密 field_history
     let history = sqlx::query_as::<_, (String, String)>("SELECT id, enc_value FROM field_history")
-        .fetch_all(&state.db)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -171,21 +174,30 @@ pub async fn change_password(
         sqlx::query("UPDATE field_history SET enc_value = ? WHERE id = ?")
             .bind(&new_enc)
             .bind(&id)
-            .execute(&state.db)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
     }
 
-    drop(key_guard);
-
     // 更新密码哈希和 salt
     let new_hash = kdf::hash_master_password(&new_bytes).map_err(|e| e.to_string())?;
-    queries::set_config(&state.db, "password_hash", &new_hash)
+    sqlx::query("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)")
+        .bind("password_hash")
+        .bind(&new_hash)
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
-    queries::set_config(&state.db, "kdf_salt", &hex::encode(new_salt))
+    sqlx::query("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)")
+        .bind("kdf_salt")
+        .bind(&hex::encode(new_salt))
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+
+    // 提交事务
+    tx.commit().await.map_err(|e| e.to_string())?;
+
+    drop(key_guard);
 
     // 更新内存中的密钥
     *state.encryption_key.write().await = Some(new_key);
