@@ -1,0 +1,32 @@
+import { ref } from 'vue'
+
+interface ToastItem {
+  id: number
+  message: string
+  type: 'info' | 'success' | 'warning' | 'error'
+  duration: number
+}
+
+const toasts = ref<ToastItem[]>([])
+let nextId = 0
+
+export function useToast() {
+  function show(message: string, type: ToastItem['type'] = 'info', duration = 3000) {
+    const id = nextId++
+    toasts.value.push({ id, message, type, duration })
+  }
+
+  function remove(id: number) {
+    toasts.value = toasts.value.filter(t => t.id !== id)
+  }
+
+  return {
+    toasts,
+    show,
+    remove,
+    success: (msg: string) => show(msg, 'success'),
+    error: (msg: string) => show(msg, 'error', 5000),
+    warning: (msg: string) => show(msg, 'warning'),
+    info: (msg: string) => show(msg, 'info'),
+  }
+}
