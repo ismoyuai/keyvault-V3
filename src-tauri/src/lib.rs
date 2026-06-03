@@ -4,6 +4,7 @@ mod db;
 mod error;
 mod native_messaging;
 mod state;
+mod tray;
 
 use state::AppState;
 use tauri::Manager;
@@ -45,6 +46,8 @@ pub fn run() {
             };
 
             app_handle.manage(app_state);
+
+            tray::setup_tray(app).expect("无法初始化系统托盘");
 
             Ok(())
         })
