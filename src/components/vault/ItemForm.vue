@@ -6,6 +6,7 @@ import KvModal from '@/components/ui/KvModal.vue'
 import { TEMPLATES, TEMPLATE_LIST } from '@/constants/templates'
 import { useVaultStore } from '@/stores/vault'
 import { useToast } from '@/composables/useToast'
+import { usePasswordGenerator } from '@/composables/usePasswordGen'
 import { vault as vaultBridge } from '@/bridge/tauri'
 import type { EntryType, FieldInput, CreateEntryInput, EntryMeta } from '@/types/vault'
 
@@ -25,6 +26,7 @@ const emit = defineEmits<{
 
 const vault = useVaultStore()
 const toast = useToast()
+const passwordGen = usePasswordGenerator()
 const step = ref<'type' | 'form'>(props.editEntry ? 'form' : 'type')
 const selectedType = ref<EntryType>(props.editEntry?.entryType || 'login')
 const title = ref(props.editEntry?.title || '')
@@ -178,6 +180,16 @@ function resetForm() {
             class="field-value-input"
             placeholder="值"
           />
+          <button
+            v-if="field.fieldType === 'password'"
+            class="generate-btn"
+            title="生成密码"
+            @click="field.value = passwordGen.generate()"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+            </svg>
+          </button>
           <button class="remove-field-btn" @click="removeField(i)">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -310,6 +322,18 @@ function resetForm() {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
+}
+
+.generate-btn {
+  padding: var(--space-1);
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.generate-btn:hover {
+  color: var(--accent-blue);
+  background: var(--bg-elevated);
 }
 
 .remove-field-btn {
