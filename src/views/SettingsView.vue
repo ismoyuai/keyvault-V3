@@ -28,7 +28,7 @@ async function handleLock() {
             <span class="label-text">自动锁定</span>
             <span class="label-hint">空闲后自动锁定（分钟）</span>
           </div>
-          <select v-model="settings.autoLockMinutes" class="setting-select">
+          <select :value="settings.autoLockMinutes" class="setting-select" @change="settings.setAutoLock(Number(($event.target as HTMLSelectElement).value))">
             <option :value="5">5 分钟</option>
             <option :value="15">15 分钟</option>
             <option :value="30">30 分钟</option>
@@ -40,7 +40,7 @@ async function handleLock() {
             <span class="label-text">剪贴板自动清空</span>
             <span class="label-hint">复制后自动清空（秒）</span>
           </div>
-          <select v-model="settings.clipboardClearSeconds" class="setting-select">
+          <select :value="settings.clipboardClearSeconds" class="setting-select" @change="settings.setClipboardClear(Number(($event.target as HTMLSelectElement).value))">
             <option :value="10">10 秒</option>
             <option :value="30">30 秒</option>
             <option :value="60">60 秒</option>
