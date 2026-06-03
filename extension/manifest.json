@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "KeyVault",
+  "version": "3.0.0",
+  "description": "本地密码管理器 — 安全自动填充",
+  "permissions": ["activeTab", "scripting", "storage", "nativeMessaging"],
+  "host_permissions": [],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/detector.js", "content/filler.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none';"
+  }
+}
