@@ -135,11 +135,3 @@ export const settings = {
   set: (key: string, value: string) =>
     invoke<void>('set_setting', { sessionToken: getToken(), key, value }),
 }
-
-// ============================================
-// 系统托盘
-// ============================================
-export const tray = {
-  lock: () => invoke<void>('tray_lock'),
-  show: () => invoke<void>('tray_show'),
-}
