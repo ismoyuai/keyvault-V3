@@ -12,6 +12,7 @@ use tokio::sync::RwLock;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
 
@@ -62,6 +63,11 @@ pub fn run() {
             commands::vault::toggle_favorite,
             commands::generator::generate_password,
             commands::breach::check_password_breach,
+            commands::clipboard_cmd::copy_to_clipboard,
+            commands::clipboard_cmd::clear_clipboard,
+            commands::window::minimize_window,
+            commands::window::toggle_maximize,
+            commands::window::close_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
