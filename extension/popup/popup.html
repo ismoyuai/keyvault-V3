@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KeyVault</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <span class="header-title">🔐 KeyVault</span>
+      <span id="status" class="status status--disconnected">● 未连接</span>
+    </header>
+
+    <div id="view-disconnected" class="view">
+      <div class="empty-state">
+        <div class="empty-icon">🔌</div>
+        <p class="empty-title">请先启动 KeyVault 应用</p>
+        <button id="btn-open-app" class="btn btn--primary">打开应用</button>
+      </div>
+    </div>
+
+    <div id="view-locked" class="view" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">🔒</div>
+        <p class="empty-title">KeyVault 已锁定</p>
+        <button id="btn-unlock" class="btn btn--primary">解锁</button>
+      </div>
+    </div>
+
+    <div id="view-connected" class="view" style="display:none">
+      <div class="search-bar">
+        <input id="search-input" type="text" placeholder="搜索密码..." class="search-input">
+      </div>
+
+      <section id="section-current" class="section">
+        <div class="section-title">当前页面</div>
+        <div id="current-entries" class="entry-list"></div>
+        <div id="no-matches" class="empty-hint" style="display:none">当前页面无匹配凭据</div>
+      </section>
+
+      <section id="section-search" class="section" style="display:none">
+        <div class="section-title">搜索结果</div>
+        <div id="search-results" class="entry-list"></div>
+        <div id="no-results" class="empty-hint" style="display:none">无匹配结果</div>
+      </section>
+    </div>
+
+    <footer class="footer">
+      <button id="btn-open-main" class="footer-btn">打开应用</button>
+      <button id="btn-generate" class="footer-btn">生成密码</button>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
