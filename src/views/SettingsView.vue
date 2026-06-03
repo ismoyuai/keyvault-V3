@@ -3,12 +3,14 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
+import { useAutoLock } from '@/composables/useAutoLock'
 import { useToast } from '@/composables/useToast'
 import { security, vault as vaultBridge } from '@/bridge/tauri'
 
 const router = useRouter()
 const auth = useAuthStore()
 const settings = useSettingsStore()
+const { lock } = useAutoLock()
 const toast = useToast()
 
 const showChangePassword = ref(false)
@@ -16,11 +18,6 @@ const oldPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
 const changingPassword = ref(false)
-
-async function handleLock() {
-  await auth.lock()
-  router.push('/login')
-}
 
 async function handleChangePassword() {
   if (newPassword.value !== confirmPassword.value) {
@@ -36,13 +33,13 @@ async function handleChangePassword() {
     await auth.changePassword(oldPassword.value, newPassword.value)
     toast.success('密码已修改')
     showChangePassword.value = false
-    oldPassword.value = ''
-    newPassword.value = ''
-    confirmPassword.value = ''
   } catch (e: any) {
     toast.error(e.message || '修改失败')
   } finally {
     changingPassword.value = false
+    oldPassword.value = ''
+    newPassword.value = ''
+    confirmPassword.value = ''
   }
 }
 
@@ -199,7 +196,7 @@ async function handleExport() {
       </section>
 
       <div class="settings-actions">
-        <button class="btn-danger" @click="handleLock">锁定</button>
+        <button class="btn-danger" @click="lock">锁定</button>
       </div>
     </div>
   </div>

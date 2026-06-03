@@ -4,7 +4,6 @@ import { useDebounceFn } from '@vueuse/core'
 import { useRouter } from 'vue-router'
 import { Plus, Lock, Settings, Star, Clock, Key, Search } from 'lucide-vue-next'
 import { useVaultStore } from '@/stores/vault'
-import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { useShortcuts } from '@/composables/useShortcuts'
 import { useAutoLock } from '@/composables/useAutoLock'
@@ -20,7 +19,6 @@ import type { EntryMeta } from '@/types/vault'
 
 const router = useRouter()
 const vault = useVaultStore()
-const auth = useAuthStore()
 const ui = useUiStore()
 const { lock } = useAutoLock()
 const { copy } = useClipboard()
@@ -37,14 +35,9 @@ onMounted(() => {
 
 useShortcuts([
   { key: 'k', ctrl: true, handler: () => ui.toggleCommandPalette() },
-  { key: 'l', ctrl: true, handler: () => handleLock() },
+  { key: 'l', ctrl: true, handler: () => lock() },
   { key: 'n', ctrl: true, handler: () => { formOpen.value = true; editEntry.value = null } },
 ])
-
-async function handleLock() {
-  await auth.lock()
-  router.push('/login')
-}
 
 function selectEntry(entry: EntryMeta) {
   selectedEntry.value = entry
@@ -83,6 +76,8 @@ function handleSaved() {
 const debouncedSearch = useDebounceFn((query: string) => {
   vault.search(query)
 }, 300)
+
+const favoritesCount = computed(() => vault.entries.filter(e => e.favorited).length)
 
 const filteredEntries = computed(() => {
   if (activeView.value === 'favorites') return vault.entries.filter(e => e.favorited)
@@ -131,7 +126,7 @@ const filteredEntries = computed(() => {
           >
             <Star :size="15" />
             <span class="nav-label">收藏</span>
-            <span class="nav-count">{{ vault.entries.filter(e => e.favorited).length }}</span>
+            <span class="nav-count">{{ favoritesCount }}</span>
           </button>
           <button
             class="nav-item"
@@ -148,7 +143,7 @@ const filteredEntries = computed(() => {
             <Settings :size="15" />
             <span class="nav-label">设置</span>
           </button>
-          <button class="nav-item" @click="handleLock">
+          <button class="nav-item" @click="lock">
             <Lock :size="15" />
             <span class="nav-label">锁定</span>
           </button>
