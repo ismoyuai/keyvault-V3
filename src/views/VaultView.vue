@@ -1,25 +1,30 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
+import { useDebounceFn, useVirtualList } from '@vueuse/core'
 import { useRouter } from 'vue-router'
-import { Plus, Lock, Settings, Star, Clock, Key, Search } from 'lucide-vue-next'
+import { Plus, Lock, Settings, Star, Clock, Key, Search, Wand2 } from 'lucide-vue-next'
 import { useVaultStore } from '@/stores/vault'
 import { useUiStore } from '@/stores/ui'
 import { useShortcuts } from '@/composables/useShortcuts'
 import { useAutoLock } from '@/composables/useAutoLock'
 import { useClipboard } from '@/composables/useClipboard'
 import { useToast } from '@/composables/useToast'
+import { useSettingsStore } from '@/stores/settings'
 import { window as windowBridge } from '@/bridge/tauri'
 import VaultItem from '@/components/vault/VaultItem.vue'
 import ItemDetail from '@/components/vault/ItemDetail.vue'
 import ItemForm from '@/components/vault/ItemForm.vue'
 import CommandPalette from '@/components/search/CommandPalette.vue'
+import PasswordGenerator from '@/components/generator/PasswordGenerator.vue'
+import ClipboardTimer from '@/components/security/ClipboardTimer.vue'
+import KvModal from '@/components/ui/KvModal.vue'
 import KvToast from '@/components/ui/KvToast.vue'
 import type { EntryMeta } from '@/types/vault'
 
 const router = useRouter()
 const vault = useVaultStore()
 const ui = useUiStore()
+const settings = useSettingsStore()
 const { lock } = useAutoLock()
 const { copy } = useClipboard()
 const toast = useToast()
@@ -28,6 +33,7 @@ const selectedEntry = ref<EntryMeta | null>(null)
 const formOpen = ref(false)
 const editEntry = ref<EntryMeta | null>(null)
 const activeView = ref<'all' | 'favorites' | 'recent'>('all')
+const showGenerator = ref(false)
 
 onMounted(() => {
   vault.loadEntries()
@@ -46,7 +52,6 @@ function selectEntry(entry: EntryMeta) {
 }
 
 function handleCopy(entry: EntryMeta) {
-  // 复制第一个敏感字段的值需要先获取 secrets，这里简单复制标题
   copy(entry.title, 'title')
   toast.success('已复制标题')
 }
@@ -73,6 +78,12 @@ function handleSaved() {
   vault.loadEntries()
 }
 
+function handleGeneratedPassword(pwd: string) {
+  navigator.clipboard.writeText(pwd)
+  showGenerator.value = false
+  toast.success('密码已复制到剪贴板')
+}
+
 const debouncedSearch = useDebounceFn((query: string) => {
   vault.search(query)
 }, 300)
@@ -84,6 +95,16 @@ const filteredEntries = computed(() => {
   if (activeView.value === 'recent') return vault.entries.slice(0, 20)
   return vault.entries
 })
+
+// 虚拟滚动
+const ITEM_HEIGHT = 52
+const { list: virtualList, containerProps, wrapperProps } = useVirtualList(
+  filteredEntries,
+  {
+    itemHeight: ITEM_HEIGHT,
+    overscan: 5,
+  }
+)
 </script>
 
 <template>
@@ -163,6 +184,14 @@ const filteredEntries = computed(() => {
               @input="debouncedSearch(vault.searchQuery)"
             />
           </div>
+          <ClipboardTimer :seconds="settings.clipboardClearSeconds" />
+          <button
+            class="add-btn"
+            title="密码生成器"
+            @click="showGenerator = true"
+          >
+            <Wand2 :size="16" />
+          </button>
           <button
             class="add-btn"
             title="新建条目 (Ctrl+N)"
@@ -172,16 +201,18 @@ const filteredEntries = computed(() => {
           </button>
         </div>
 
-        <div class="list-body">
-          <VaultItem
-            v-for="entry in filteredEntries"
-            :key="entry.id"
-            :entry="entry"
-            :selected="selectedEntry?.id === entry.id"
-            @select="selectEntry(entry)"
-            @copy="handleCopy(entry)"
-            @toggle-favorite="vault.toggleFavorite(entry.id)"
-          />
+        <div v-bind="containerProps" class="list-body">
+          <div v-bind="wrapperProps">
+            <VaultItem
+              v-for="item in virtualList"
+              :key="item.data.id"
+              :entry="item.data"
+              :selected="selectedEntry?.id === item.data.id"
+              @select="selectEntry(item.data)"
+              @copy="handleCopy(item.data)"
+              @toggle-favorite="vault.toggleFavorite(item.data.id)"
+            />
+          </div>
 
           <div v-if="!vault.isLoading && filteredEntries.length === 0" class="empty-state">
             <Key :size="32" class="empty-icon" />
@@ -216,6 +247,15 @@ const filteredEntries = computed(() => {
       @close="formOpen = false; editEntry = null"
       @saved="handleSaved"
     />
+
+    <!-- 密码生成器 -->
+    <KvModal
+      :open="showGenerator"
+      title="密码生成器"
+      @close="showGenerator = false"
+    >
+      <PasswordGenerator @select="handleGeneratedPassword" />
+    </KvModal>
 
     <!-- Toast 容器 -->
     <div class="toast-container">
