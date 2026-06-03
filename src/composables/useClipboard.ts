@@ -8,6 +8,7 @@ import { clipboard } from '@/bridge/tauri'
 import { useSettingsStore } from '@/stores/settings'
 
 export function useClipboard() {
+  const settings = useSettingsStore()
   const timer = ref<ReturnType<typeof setTimeout> | null>(null)
   const copiedField = ref<string | null>(null)
 
@@ -17,7 +18,6 @@ export function useClipboard() {
 
     if (timer.value) clearTimeout(timer.value)
 
-    const settings = useSettingsStore()
     const seconds = settings.clipboardClearSeconds || 30
     timer.value = setTimeout(() => {
       clearClipboard()
