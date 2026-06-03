@@ -5,6 +5,7 @@
  */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useThrottleFn } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 import { useClipboard } from './useClipboard'
@@ -30,9 +31,9 @@ export function useAutoLock() {
     router.push('/login')
   }
 
-  function handleActivity() {
+  const throttledActivity = useThrottleFn(() => {
     resetTimer()
-  }
+  }, 1000)
 
   function handleBlur() {
     clearClipboard()
@@ -40,17 +41,17 @@ export function useAutoLock() {
 
   onMounted(() => {
     resetTimer()
-    document.addEventListener('mousemove', handleActivity)
-    document.addEventListener('keydown', handleActivity)
-    document.addEventListener('click', handleActivity)
+    document.addEventListener('mousemove', throttledActivity)
+    document.addEventListener('keydown', throttledActivity)
+    document.addEventListener('click', throttledActivity)
     window.addEventListener('blur', handleBlur)
   })
 
   onUnmounted(() => {
     if (timer.value) clearTimeout(timer.value)
-    document.removeEventListener('mousemove', handleActivity)
-    document.removeEventListener('keydown', handleActivity)
-    document.removeEventListener('click', handleActivity)
+    document.removeEventListener('mousemove', throttledActivity)
+    document.removeEventListener('keydown', throttledActivity)
+    document.removeEventListener('click', throttledActivity)
     window.removeEventListener('blur', handleBlur)
   })
 
