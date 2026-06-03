@@ -33,3 +33,6 @@ extension/manifests/firefox-manifest.json
 
 # Tauri generated
 src-tauri/gen/
+
+# Superpowers plugin cache
+.superpowers/
