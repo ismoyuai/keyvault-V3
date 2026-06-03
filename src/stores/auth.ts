@@ -62,6 +62,10 @@ export const useAuthStore = defineStore('auth', () => {
     isUnlocked.value = false
   }
 
+  async function changePassword(oldPassword: string, newPassword: string) {
+    await authBridge.changePassword(oldPassword, newPassword)
+  }
+
   return {
     isUnlocked,
     isInitialized,
@@ -71,5 +75,6 @@ export const useAuthStore = defineStore('auth', () => {
     setup,
     unlock,
     lock,
+    changePassword,
   }
 })

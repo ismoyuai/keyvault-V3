@@ -1,15 +1,48 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const auth = useAuthStore()
 const settings = useSettingsStore()
+const toast = useToast()
+
+const showChangePassword = ref(false)
+const oldPassword = ref('')
+const newPassword = ref('')
+const confirmPassword = ref('')
+const changingPassword = ref(false)
 
 async function handleLock() {
   await auth.lock()
   router.push('/login')
+}
+
+async function handleChangePassword() {
+  if (newPassword.value !== confirmPassword.value) {
+    toast.error('两次密码不一致')
+    return
+  }
+  if (newPassword.value.length < 8) {
+    toast.error('密码长度至少 8 位')
+    return
+  }
+  changingPassword.value = true
+  try {
+    await auth.changePassword(oldPassword.value, newPassword.value)
+    toast.success('密码已修改')
+    showChangePassword.value = false
+    oldPassword.value = ''
+    newPassword.value = ''
+    confirmPassword.value = ''
+  } catch (e: any) {
+    toast.error(e.message || '修改失败')
+  } finally {
+    changingPassword.value = false
+  }
 }
 </script>
 
@@ -46,6 +79,43 @@ async function handleLock() {
             <option :value="60">60 秒</option>
             <option :value="0">禁用</option>
           </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="label-text">修改密码</span>
+            <span class="label-hint">更改主密码</span>
+          </div>
+          <button class="btn-secondary" @click="showChangePassword = !showChangePassword">
+            {{ showChangePassword ? '取消' : '修改' }}
+          </button>
+        </div>
+
+        <div v-if="showChangePassword" class="change-password-form">
+          <input
+            v-model="oldPassword"
+            type="password"
+            placeholder="当前密码"
+            class="password-input"
+          />
+          <input
+            v-model="newPassword"
+            type="password"
+            placeholder="新密码（至少 8 位）"
+            class="password-input"
+          />
+          <input
+            v-model="confirmPassword"
+            type="password"
+            placeholder="确认新密码"
+            class="password-input"
+          />
+          <button
+            class="btn-primary"
+            :disabled="changingPassword"
+            @click="handleChangePassword"
+          >
+            {{ changingPassword ? '修改中...' : '确认修改' }}
+          </button>
         </div>
       </section>
 
@@ -159,5 +229,58 @@ async function handleLock() {
 
 .btn-danger:hover {
   opacity: 0.9;
+}
+
+.btn-secondary {
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent-blue);
+}
+
+.change-password-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+}
+
+.password-input {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.password-input:focus {
+  border-color: var(--accent-blue);
+  outline: none;
+}
+
+.btn-primary {
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent-blue);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  align-self: flex-start;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>
