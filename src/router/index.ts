@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -32,11 +33,10 @@ const router = createRouter({
   ],
 })
 
-// 路由守卫：未解锁时不允许访问需要认证的页面
 router.beforeEach((to) => {
-  if (to.meta.requiresAuth) {
-    // auth store 的 isUnlocked 检查在组件内进行
-    // 这里只做基础路由保护
+  const auth = useAuthStore()
+  if (to.meta.requiresAuth && !auth.isUnlocked) {
+    return { name: 'login' }
   }
 })
 
