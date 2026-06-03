@@ -2,6 +2,7 @@ pub mod auth;
 pub mod breach;
 pub mod clipboard_cmd;
 pub mod generator;
+pub mod groups;
 pub mod native_ext;
 pub mod settings;
 pub mod vault;
