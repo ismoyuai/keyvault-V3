@@ -13,14 +13,28 @@ interface CharsetConfig {
   symbols: boolean
 }
 
-const CHARSETS = {
+const CHARSETS: Record<string, string> = {
   uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
   lowercase: 'abcdefghijklmnopqrstuvwxyz',
   numbers: '0123456789',
   symbols: '!@#$%^&*()_+-=[]{}|;:,.<>?',
-} as const
+}
 
 const AMBIGUOUS = 'Il1O0'
+
+/**
+ * 从 [0, limit) 范围内生成均匀分布的随机索引
+ * 使用 rejection sampling 消除 modulo bias
+ */
+function secureRandomIndex(limit: number): number {
+  if (limit <= 0 || limit > 256) throw new Error('limit must be 1-256')
+  const maxValid = Math.floor(256 / limit) * limit
+  const bytes = new Uint8Array(1)
+  do {
+    crypto.getRandomValues(bytes)
+  } while (bytes[0] >= maxValid)
+  return bytes[0] % limit
+}
 
 export function usePasswordGenerator() {
   const password = ref('')
@@ -66,26 +80,23 @@ export function usePasswordGenerator() {
     }
 
     const len = length.value
-    const randomBytes = new Uint32Array(len * 2)
-    crypto.getRandomValues(randomBytes)
-
     let pwd = ''
 
     // 确保每种选中的字符类型至少出现一次
     for (let i = 0; i < required.length && i < len; i++) {
       const chars = required[i]
-      pwd += chars[randomBytes[i] % chars.length]
+      pwd += chars[secureRandomIndex(chars.length)]
     }
 
     // 填充剩余长度
     for (let i = pwd.length; i < len; i++) {
-      pwd += charset[randomBytes[i + required.length] % charset.length]
+      pwd += charset[secureRandomIndex(charset.length)]
     }
 
     // Fisher-Yates 洗牌
     const arr = pwd.split('')
     for (let i = arr.length - 1; i > 0; i--) {
-      const j = randomBytes[len + i] % (i + 1)
+      const j = secureRandomIndex(i + 1)
       ;[arr[i], arr[j]] = [arr[j], arr[i]]
     }
 
