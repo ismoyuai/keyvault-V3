@@ -113,3 +113,124 @@ pub async fn write_audit_log(
     .await?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn setup_db() -> SqlitePool {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE config (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE groups (
+                id TEXT PRIMARY KEY, name TEXT NOT NULL, icon TEXT, color TEXT,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE TABLE entries (
+                id TEXT PRIMARY KEY, group_id TEXT, entry_type TEXT NOT NULL,
+                title TEXT NOT NULL, subtitle TEXT, tags TEXT,
+                favorited INTEGER NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE TABLE fields (
+                id TEXT PRIMARY KEY, entry_id TEXT NOT NULL, field_key TEXT NOT NULL,
+                field_type TEXT NOT NULL DEFAULT 'text', enc_value TEXT NOT NULL,
+                is_sensitive INTEGER NOT NULL DEFAULT 1, sort_order INTEGER NOT NULL DEFAULT 0
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE TABLE audit_log (
+                id TEXT PRIMARY KEY, action TEXT NOT NULL, entry_id TEXT,
+                field_key TEXT, metadata TEXT, occurred_at INTEGER NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn test_get_config_returns_none_for_missing() {
+        let pool = setup_db().await;
+        let result = get_config(&pool, "nonexistent").await.unwrap();
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_set_and_get_config() {
+        let pool = setup_db().await;
+        set_config(&pool, "theme", "dark").await.unwrap();
+        let result = get_config(&pool, "theme").await.unwrap();
+        assert_eq!(result, Some("dark".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_set_config_overwrites() {
+        let pool = setup_db().await;
+        set_config(&pool, "theme", "dark").await.unwrap();
+        set_config(&pool, "theme", "light").await.unwrap();
+        let result = get_config(&pool, "theme").await.unwrap();
+        assert_eq!(result, Some("light".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_list_groups_empty() {
+        let pool = setup_db().await;
+        let groups = list_groups(&pool).await.unwrap();
+        assert!(groups.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_list_groups_with_data() {
+        let pool = setup_db().await;
+        let now = chrono::Utc::now().timestamp();
+        sqlx::query(
+            "INSERT INTO groups (id, name, icon, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .bind("g1")
+        .bind("Work")
+        .bind(Some("briefcase"))
+        .bind(0)
+        .bind(now)
+        .bind(now)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let groups = list_groups(&pool).await.unwrap();
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].name, "Work");
+    }
+
+    #[tokio::test]
+    async fn test_write_audit_log() {
+        let pool = setup_db().await;
+        write_audit_log(&pool, "unlock", None, None, None)
+            .await
+            .unwrap();
+        // Verify it was written
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM audit_log")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count.0, 1);
+    }
+}
