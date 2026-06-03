@@ -43,7 +43,7 @@ pub async fn export_vault(
     let key_guard = state.encryption_key.read().await;
     let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
 
-    let entries = queries::list_entries(&state.db)
+    let entries = queries::list_entries(&state.db, 100, 0)
         .await
         .map_err(|e| e.to_string())?;
 

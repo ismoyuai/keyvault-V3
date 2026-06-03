@@ -6,11 +6,14 @@ use super::schema::{EntryMeta, FieldRow, GroupRow};
 // 条目查询
 // ============================================
 
-pub async fn list_entries(pool: &SqlitePool) -> Result<Vec<EntryMeta>, sqlx::Error> {
+pub async fn list_entries(pool: &SqlitePool, limit: i64, offset: i64) -> Result<Vec<EntryMeta>, sqlx::Error> {
     sqlx::query_as::<_, EntryMeta>(
         "SELECT id, entry_type, title, subtitle, tags, favorited, group_id, updated_at
-         FROM entries ORDER BY favorited DESC, updated_at DESC",
+         FROM entries ORDER BY favorited DESC, updated_at DESC
+         LIMIT ? OFFSET ?",
     )
+    .bind(limit)
+    .bind(offset)
     .fetch_all(pool)
     .await
 }

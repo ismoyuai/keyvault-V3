@@ -90,7 +90,7 @@ pub async fn list_entries(
         return Err("会话已过期".to_string());
     }
 
-    let rows = queries::list_entries(&state.db)
+    let rows = queries::list_entries(&state.db, 100, 0)
         .await
         .map_err(|e| e.to_string())?;
 
