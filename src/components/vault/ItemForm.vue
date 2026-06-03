@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import KvButton from '@/components/ui/KvButton.vue'
 import KvInput from '@/components/ui/KvInput.vue'
 import KvModal from '@/components/ui/KvModal.vue'
@@ -33,6 +33,21 @@ const tags = ref(props.editEntry?.tags.join(', ') || '')
 const fields = ref<FieldInput[]>([])
 
 const template = computed(() => TEMPLATES[selectedType.value])
+
+watch(() => props.open, (isOpen) => {
+  if (isOpen) {
+    if (props.editEntry) {
+      step.value = 'form'
+      selectedType.value = props.editEntry.entryType
+      title.value = props.editEntry.title
+      subtitle.value = props.editEntry.subtitle || ''
+      tags.value = props.editEntry.tags.join(', ')
+      fields.value = []
+    } else {
+      resetForm()
+    }
+  }
+})
 
 function selectType(type: EntryType) {
   selectedType.value = type
