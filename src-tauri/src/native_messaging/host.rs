@@ -53,6 +53,8 @@ pub fn run() {
         db: pool,
         sessions: crypto::session::SessionManager::new(),
         kdf_salt: RwLock::new(None),
+        unlock_failures: std::sync::atomic::AtomicU32::new(0),
+        last_failure_time: std::sync::atomic::AtomicI64::new(0),
     };
 
     // Native Messaging Host 自身的 session token

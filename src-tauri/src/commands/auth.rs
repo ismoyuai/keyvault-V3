@@ -56,7 +56,17 @@ pub async fn setup(password: String, state: State<'_, AppState>) -> Result<Strin
 
 #[tauri::command]
 pub async fn unlock(password: String, state: State<'_, AppState>) -> Result<String, String> {
+    use std::sync::atomic::Ordering;
     use zeroize::Zeroizing;
+
+    // 检查暴力破解防护
+    if state.is_unlock_locked() {
+        let failures = state.unlock_failures.load(Ordering::SeqCst);
+        return Err(format!(
+            "密码错误次数过多（{}次），请5分钟后重试",
+            failures
+        ));
+    }
 
     let password_bytes = Zeroizing::new(password.into_bytes());
 
@@ -70,8 +80,16 @@ pub async fn unlock(password: String, state: State<'_, AppState>) -> Result<Stri
     let valid = kdf::verify_master_password(&password_bytes, &hash).map_err(|e| e.to_string())?;
 
     if !valid {
-        return Err("密码错误".to_string());
+        state.record_unlock_failure();
+        let failures = state.unlock_failures.load(Ordering::SeqCst);
+        return Err(format!(
+            "密码错误（已失败{}次，超过5次将锁定5分钟）",
+            failures
+        ));
     }
+
+    // 密码验证成功，重置失败计数
+    state.reset_unlock_failures();
 
     // 3. 获取 KDF salt
     let salt_hex = queries::get_config(&state.db, "kdf_salt")
