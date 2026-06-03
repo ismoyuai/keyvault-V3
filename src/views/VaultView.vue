@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import { useRouter } from 'vue-router'
 import { Plus, Lock, Settings, Star, Clock, Key, Search } from 'lucide-vue-next'
 import { useVaultStore } from '@/stores/vault'
@@ -78,6 +79,10 @@ function handleEdit(entry: EntryMeta) {
 function handleSaved() {
   vault.loadEntries()
 }
+
+const debouncedSearch = useDebounceFn((query: string) => {
+  vault.search(query)
+}, 300)
 
 const filteredEntries = computed(() => {
   if (activeView.value === 'favorites') return vault.entries.filter(e => e.favorited)
@@ -160,7 +165,7 @@ const filteredEntries = computed(() => {
               type="text"
               placeholder="搜索条目..."
               class="search-input"
-              @input="vault.search(vault.searchQuery)"
+              @input="debouncedSearch(vault.searchQuery)"
             />
           </div>
           <button
