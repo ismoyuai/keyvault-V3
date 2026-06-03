@@ -12,7 +12,7 @@ pub struct AppState {
     /// 会话令牌管理器
     pub sessions: SessionManager,
     /// KDF 的 salt（存储在 DB 的 config 表中）
-    pub kdf_salt: RwLock<Option<[u8; 16]>>,
+    pub kdf_salt: RwLock<Option<Zeroizing<[u8; 16]>>>,
 }
 
 impl AppState {

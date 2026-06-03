@@ -47,7 +47,7 @@ pub async fn setup(password: String, state: State<'_, AppState>) -> Result<Strin
 
     // 5. 激活加密密钥
     *state.encryption_key.write().await = Some(key);
-    *state.kdf_salt.write().await = Some(salt);
+    *state.kdf_salt.write().await = Some(Zeroizing::new(salt));
 
     // 6. 创建会话
     let token = state.sessions.create().await;
@@ -88,7 +88,7 @@ pub async fn unlock(password: String, state: State<'_, AppState>) -> Result<Stri
 
     // 5. 激活密钥
     *state.encryption_key.write().await = Some(key);
-    *state.kdf_salt.write().await = Some(salt);
+    *state.kdf_salt.write().await = Some(Zeroizing::new(salt));
 
     // 6. 创建会话
     let token = state.sessions.create().await;
@@ -201,7 +201,7 @@ pub async fn change_password(
 
     // 更新内存中的密钥
     *state.encryption_key.write().await = Some(new_key);
-    *state.kdf_salt.write().await = Some(new_salt);
+    *state.kdf_salt.write().await = Some(Zeroizing::new(new_salt));
 
     Ok(())
 }
