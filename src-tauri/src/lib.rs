@@ -66,3 +66,7 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+pub fn run_native_messaging() {
+    native_messaging::host::run();
+}
