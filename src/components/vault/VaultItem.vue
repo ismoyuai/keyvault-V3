@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Key, Code, Terminal, Server, FileText, User, CreditCard, Package, Wallet, File } from 'lucide-vue-next'
+import KvIcon from '@/components/icons/KvIcon.vue'
 import type { EntryMeta, EntryType } from '@/types/vault'
 
 interface Props {
@@ -18,17 +18,17 @@ const emit = defineEmits<{
   toggleFavorite: []
 }>()
 
-const TYPE_ICONS: Record<EntryType, typeof Key> = {
-  login: Key,
-  api_key: Code,
-  ssh_key: Terminal,
-  server: Server,
-  note: FileText,
-  identity: User,
-  card: CreditCard,
-  license: Package,
-  crypto: Wallet,
-  custom: File,
+const TYPE_ICONS: Record<EntryType, string> = {
+  login: 'key',
+  api_key: 'code',
+  ssh_key: 'terminal',
+  server: 'dns',
+  note: 'description',
+  identity: 'person',
+  card: 'credit_card',
+  license: 'verified',
+  crypto: 'account_balance_wallet',
+  custom: 'draft',
 }
 
 const TYPE_COLORS: Record<EntryType, string> = {
@@ -44,8 +44,8 @@ const TYPE_COLORS: Record<EntryType, string> = {
   custom: 'var(--type-custom)',
 }
 
-const icon = computed(() => TYPE_ICONS[props.entry.entryType] || File)
-const iconBg = computed(() => TYPE_COLORS[props.entry.entryType] || 'var(--type-custom)')
+const iconName = computed(() => TYPE_ICONS[props.entry.entryType] ?? 'draft')
+const iconBg = computed(() => TYPE_COLORS[props.entry.entryType] ?? 'var(--type-custom)')
 </script>
 
 <template>
@@ -55,7 +55,7 @@ const iconBg = computed(() => TYPE_COLORS[props.entry.entryType] || 'var(--type-
     @click="emit('select')"
   >
     <div class="vault-item__icon" :style="{ background: iconBg }">
-      <component :is="icon" :size="14" />
+      <KvIcon :name="iconName" :size="18" />
     </div>
     <div class="vault-item__info">
       <div class="vault-item__title">{{ entry.title }}</div>
@@ -67,10 +67,7 @@ const iconBg = computed(() => TYPE_COLORS[props.entry.entryType] || 'var(--type-
         title="复制"
         @click.stop="emit('copy')"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-        </svg>
+        <KvIcon name="content_copy" :size="14" />
       </button>
       <button
         class="vault-item__action"
@@ -78,9 +75,11 @@ const iconBg = computed(() => TYPE_COLORS[props.entry.entryType] || 'var(--type-
         title="收藏"
         @click.stop="emit('toggleFavorite')"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" :fill="entry.favorited ? 'var(--color-warning)' : 'none'" stroke="currentColor" stroke-width="2">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-        </svg>
+        <KvIcon
+          name="star"
+          :size="14"
+          :fill="entry.favorited"
+        />
       </button>
     </div>
   </div>
@@ -110,12 +109,13 @@ const iconBg = computed(() => TYPE_COLORS[props.entry.entryType] || 'var(--type-
 }
 
 .vault-item__icon {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   flex-shrink: 0;
   color: var(--text-primary);
 }
@@ -126,7 +126,7 @@ const iconBg = computed(() => TYPE_COLORS[props.entry.entryType] || 'var(--type-
 }
 
 .vault-item__title {
-  font-size: var(--text-base);
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
@@ -135,7 +135,7 @@ const iconBg = computed(() => TYPE_COLORS[props.entry.entryType] || 'var(--type-
 }
 
 .vault-item__subtitle {
-  font-size: var(--text-xs);
+  font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;

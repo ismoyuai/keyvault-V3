@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted } from 'vue'
-import { Copy, Eye, EyeOff, Edit, Trash2, ExternalLink } from 'lucide-vue-next'
 import { vault as vaultBridge } from '@/bridge/tauri'
 import { useClipboard } from '@/composables/useClipboard'
 import { useToast } from '@/composables/useToast'
-import { useVaultStore } from '@/stores/vault'
+import KvIcon from '@/components/icons/KvIcon.vue'
 import BreachBadge from '@/components/security/BreachBadge.vue'
-import type { EntryMeta, EntrySecrets } from '@/types/vault'
+import type { DecryptedField, EntryMeta, EntrySecrets } from '@/types/vault'
 
 interface Props {
   entry: EntryMeta | null
@@ -20,20 +19,57 @@ const emit = defineEmits<{
   delete: [entry: EntryMeta]
 }>()
 
+const FIELD_LABELS: Record<string, string> = {
+  username: '用户名',
+  password: '密码',
+  url: '网址',
+  api_key: 'API Key',
+  notes: '内容',
+  public_key: '公钥',
+  private_key: '私钥',
+  email: '邮箱',
+  phone: '电话',
+  address: '地址',
+  host: '主机',
+  port: '端口',
+  ssh_key: 'SSH Key',
+  expiry_date: '有效期',
+  cvv: 'CVV',
+  mnemonic: '助记词',
+  rate_limit: 'Rate Limit',
+}
+
 const secrets = ref<EntrySecrets | null>(null)
 const isLoading = ref(false)
 const visibleFields = ref<Set<string>>(new Set())
 const { copy, copiedField } = useClipboard()
 const toast = useToast()
-const vault = useVaultStore()
+
+function fieldLabel(fieldKey: string): string {
+  return FIELD_LABELS[fieldKey] ?? fieldKey
+}
+
+function isUrlField(field: DecryptedField): boolean {
+  return field.fieldType === 'url' || field.fieldKey === 'url'
+}
+
+function isPasswordField(field: DecryptedField): boolean {
+  return field.fieldType === 'password'
+}
+
+function maskedValue(field: DecryptedField): string {
+  const len = Math.min(field.value.length, 20)
+  return '•'.repeat(Math.max(len, 8))
+}
 
 async function loadSecrets() {
   if (!props.entry) return
   isLoading.value = true
   try {
     secrets.value = await vaultBridge.getEntrySecrets(props.entry.id)
-  } catch (e: any) {
-    toast.error(e.message || '加载失败')
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : '加载失败'
+    toast.error(message)
   } finally {
     isLoading.value = false
   }
@@ -52,11 +88,20 @@ async function copyField(value: string, fieldKey: string) {
   toast.success('已复制到剪贴板')
 }
 
-watch(() => props.entry, (newEntry) => {
-  secrets.value = null
-  visibleFields.value.clear()
-  if (newEntry) loadSecrets()
-}, { immediate: true })
+function openUrl(raw: string) {
+  const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+watch(
+  () => props.entry,
+  (newEntry) => {
+    secrets.value = null
+    visibleFields.value.clear()
+    if (newEntry) loadSecrets()
+  },
+  { immediate: true },
+)
 
 onUnmounted(() => {
   secrets.value = null
@@ -67,10 +112,8 @@ onUnmounted(() => {
   <div class="detail-panel">
     <div class="detail-header">
       <h3 class="detail-title">{{ entry?.title || '条目详情' }}</h3>
-      <button class="detail-close" @click="emit('close')">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
+      <button type="button" class="detail-close" title="关闭" @click="emit('close')">
+        <KvIcon name="close" :size="16" />
       </button>
     </div>
 
@@ -89,39 +132,68 @@ onUnmounted(() => {
         <div
           v-for="field in secrets.fields"
           :key="field.fieldKey"
-          class="field-row"
+          class="field-group"
         >
-          <div class="field-label">{{ field.fieldKey }}</div>
-          <div class="field-value-wrapper">
-            <template v-if="field.isSensitive">
-              <span v-if="visibleFields.has(field.fieldKey)" class="field-value font-mono">
-                {{ field.value }}
-              </span>
-              <span v-else class="field-value field-masked font-mono">
-                {{ '•'.repeat(Math.min(field.value.length, 20)) }}
-              </span>
+          <div class="field-label">{{ fieldLabel(field.fieldKey) }}</div>
+          <div class="secure-field">
+            <template v-if="field.fieldType === 'textarea'">
+              <pre
+                v-if="field.isSensitive && !visibleFields.has(field.fieldKey)"
+                class="field-value field-value--textarea font-mono field-value--masked"
+              >{{ maskedValue(field) }}</pre>
+              <pre
+                v-else
+                class="field-value field-value--textarea font-mono"
+              >{{ field.value }}</pre>
             </template>
-            <span v-else class="field-value">{{ field.value }}</span>
+            <template v-else-if="field.isSensitive">
+              <span
+                v-if="visibleFields.has(field.fieldKey)"
+                class="field-value font-mono"
+                :class="{ 'field-value--password': isPasswordField(field) }"
+              >{{ field.value }}</span>
+              <span
+                v-else
+                class="field-value font-mono field-value--masked"
+                :class="{ 'field-value--password': isPasswordField(field) }"
+              >{{ maskedValue(field) }}</span>
+            </template>
+            <span v-else class="field-value" :class="{ 'font-mono': field.isSensitive }">
+              {{ field.value }}
+            </span>
 
             <BreachBadge v-if="field.fieldType === 'password'" :password="field.value" />
 
             <div class="field-actions">
               <button
                 v-if="field.isSensitive"
+                type="button"
                 class="field-action"
                 title="显示/隐藏"
                 @click="toggleVisibility(field.fieldKey)"
               >
-                <Eye v-if="!visibleFields.has(field.fieldKey)" :size="13" />
-                <EyeOff v-else :size="13" />
+                <KvIcon
+                  :name="visibleFields.has(field.fieldKey) ? 'visibility_off' : 'visibility'"
+                  :size="16"
+                />
               </button>
               <button
+                v-if="isUrlField(field)"
+                type="button"
+                class="field-action"
+                title="在浏览器中打开"
+                @click="openUrl(field.value)"
+              >
+                <KvIcon name="open_in_new" :size="16" />
+              </button>
+              <button
+                type="button"
                 class="field-action"
                 :class="{ 'field-action--copied': copiedField === field.fieldKey }"
                 title="复制"
                 @click="copyField(field.value, field.fieldKey)"
               >
-                <Copy :size="13" />
+                <KvIcon name="content_copy" :size="16" />
               </button>
             </div>
           </div>
@@ -133,12 +205,12 @@ onUnmounted(() => {
       </div>
 
       <div class="detail-actions">
-        <button class="action-btn" @click="emit('edit', entry)">
-          <Edit :size="14" />
+        <button type="button" class="action-btn" @click="emit('edit', entry)">
+          <KvIcon name="edit" :size="16" />
           <span>编辑</span>
         </button>
-        <button class="action-btn action-btn--danger" @click="emit('delete', entry)">
-          <Trash2 :size="14" />
+        <button type="button" class="action-btn action-btn--danger" @click="emit('delete', entry)">
+          <KvIcon name="delete" :size="16" />
           <span>删除</span>
         </button>
       </div>
@@ -177,6 +249,9 @@ onUnmounted(() => {
 }
 
 .detail-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-tertiary);
   padding: var(--space-1);
   border-radius: var(--radius-sm);
@@ -238,36 +313,47 @@ onUnmounted(() => {
 .detail-fields {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
-.field-row {
+.field-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 
 .field-label {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.field-value-wrapper {
+.secure-field {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: var(--bg-input);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
   min-height: 34px;
+  transition:
+    border-color var(--duration-fast),
+    box-shadow var(--duration-fast);
+}
+
+.secure-field:focus-within {
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 2px var(--accent-blue-dim);
 }
 
 .field-value {
   flex: 1;
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -275,31 +361,52 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-.field-masked {
+.field-value--textarea {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+}
+
+.field-value--masked {
   color: var(--text-tertiary);
-  letter-spacing: 0.1em;
+}
+
+.field-value--password.field-value--masked {
+  letter-spacing: 0.2em;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
 }
 
 .field-actions {
   display: flex;
+  align-items: center;
   gap: var(--space-1);
   flex-shrink: 0;
   opacity: 0;
   transition: opacity var(--duration-fast);
 }
 
-.field-value-wrapper:hover .field-actions {
+.field-group:hover .field-actions,
+.secure-field:focus-within .field-actions {
   opacity: 1;
 }
 
 .field-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--space-1);
   color: var(--text-tertiary);
   border-radius: var(--radius-sm);
 }
 
 .field-action:hover {
-  color: var(--text-primary);
+  color: var(--text-accent);
   background: var(--bg-elevated);
 }
 

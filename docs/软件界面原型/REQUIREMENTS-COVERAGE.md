@@ -24,13 +24,13 @@
 | **账户** | 首次设置 2 步 | `setup_1`、 `setup_2` | `SetupView.vue` | Must | **Done** |
 | **账户** | 解锁 | `keyvault_6` | `UnlockView.vue` | Done | **Done** |
 | **账户** | 5 次失败锁定 | `unlock_lockout` | `auth.rs` | Must | **Done** |
-| **账户** | 修改主密码 | `modal_change_password` | Settings 内联 | Should | **Done** |
-| **密码库** | 三栏主页 | `keyvault_3` | `VaultView.vue` | Done | **Done** |
-| **密码库** | 10 种条目类型 | `keyvault_1` 仅表单 | `templates.ts` | Must | 待扩展类型网格 |
+| **账户** | 修改主密码 | `modal_change_password` | `ChangePasswordModal.vue` | Should | **Done** |
+| **密码库** | 三栏主页 | `keyvault_3` | `VaultView.vue` + Shell | Done | **Done** |
+| **密码库** | 10 种条目类型 | `keyvault_1` 仅表单 | `EntryTypePicker.vue`（card 隐藏） | Must | **Done**（v1 网格） |
 | **密码库** | 通用详情 | `entry_detail_generic` | `ItemDetail.vue` | Must | **Done** |
-| **密码库** | 删除确认 | `modal_delete` | delete 逻辑 | Must | **Done** |
-| **密码库** | 回收站 | `vault_trash` | 待确认后端 | Should | **Done**（原型） |
-| **密码库** | 空状态 | `empty_states` | 部分逻辑 | Should | **Done** |
+| **密码库** | 删除确认 | `modal_delete` | `DeleteConfirmModal.vue` | Must | **Done** |
+| **密码库** | 回收站 | `vault_trash` | `VaultView` trash stub + `VaultTrashBanner` | Should | **UI stub**（无 Rust soft-delete） |
+| **密码库** | 空状态 | `empty_states` | `VaultEmptyState.vue` | Should | **Done** |
 | **安全工具** | 剪贴板倒计时 | `component_clipboard_timer` | `ClipboardTimer.vue` | Should | **Done** |
 | **安全工具** | HIBP 泄露检测 | `keyvault_2` 扩展 | `SettingsView.vue` | Should | 待扩展 |
 | **账户** | 紧急擦除 | `modal_emergency_wipe` | 无 | Future | **Done**（原型） |
@@ -66,7 +66,7 @@
 | Should 原型 | **基本齐**（设置页 HIBP/剪贴板下拉待扩展） |
 | Vue 重构启动 | **可启动** |
 
-**结论:** Stitch 补充包入库后，桌面端 Must 原型已覆盖；剩余工作为 `keyvault_1` 类型选择器扩展与 `keyvault_2` 设置页安全区块扩展。
+**结论:** 桌面端 Must/Should 原型已在 worktree `feature/frontend-prototype-refactor` 对齐实现；回收站为 UI stub（永久删除 + 待 soft-delete API）；剩余为 HIBP 设置扩展、笔记变体 B、合并 master。
 
 ---
 
