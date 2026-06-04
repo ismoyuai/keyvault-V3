@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Ingest stitch_keyvault-软件补充界面 → canonical prototype directories.
+"""Ingest _sources/stitch-2026-06-04 → canonical screens/ directories.
 
 Run: python docs/软件界面原型/_shared/ingest-stitch-prototypes.py
 """
@@ -10,30 +10,30 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-STITCH = ROOT / "stitch_keyvault-软件补充界面"
+STITCH = ROOT / "_sources" / "stitch-2026-06-04"
 
 # stitch relative path → (canonical dir under ROOT, CANONICAL comment)
 INGEST_MAP: dict[str, tuple[str, str]] = {
-    "1/code.html": ("setup_1", "首次设置 Step 1/2。见 UNIFIED-SPEC.md §2.5 变体 D"),
-    "2/code.html": ("setup_2", "首次设置 Step 2/2 确认主密码。见 UNIFIED-SPEC.md §2.5 变体 D"),
-    "keyvault_4/code.html": ("modal_delete", "删除条目确认模态。见 UNIFIED-SPEC.md §2.5 变体 E"),
+    "1/code.html": ("screens/account/setup-step1-password", "首次设置 Step 1/2。见 UNIFIED-SPEC.md §2.5 变体 D"),
+    "2/code.html": ("screens/account/setup-step2-confirm", "首次设置 Step 2/2 确认主密码。见 UNIFIED-SPEC.md §2.5 变体 D"),
+    "keyvault_4/code.html": ("screens/modals/delete-confirm", "删除条目确认模态。见 UNIFIED-SPEC.md §2.5 变体 F"),
     "ssh_keyvault/code.html": (
-        "entry_detail_generic",
+        "screens/vault/entry-detail-ssh",
         "通用条目详情（SSH 示例）。见 UNIFIED-SPEC.md §2.5 变体 A",
     ),
-    "keyvault_6/code.html": ("unlock_lockout", "解锁页暴力破解锁定态。见 UNIFIED-SPEC.md §2.5 变体 D"),
+    "keyvault_6/code.html": ("screens/account/unlock-lockout", "解锁页暴力破解锁定态。见 UNIFIED-SPEC.md §2.5 变体 D"),
     "keyvault_2/code.html": (
-        "modal_new_entry",
+        "screens/modals/new-entry",
         "新建网站密码模态。见 UNIFIED-SPEC.md §2.5 变体 F / PROTOTYPE-PROMPTS P1-2",
     ),
-    "keyvault_1/code.html": ("modal_change_password", "修改主密码模态。见 PROTOTYPE-PROMPTS P1-4"),
-    "keyvault_3/code.html": ("vault_trash", "主界面三栏 · 回收站。见 PROTOTYPE-PROMPTS P2-1"),
-    "keyvault_5/code.html": ("empty_states", "空状态三场景。见 PROTOTYPE-PROMPTS P2-2"),
+    "keyvault_1/code.html": ("screens/modals/change-password", "修改主密码模态。见 PROTOTYPE-PROMPTS P1-4"),
+    "keyvault_3/code.html": ("screens/vault/trash", "主界面三栏 · 回收站。见 PROTOTYPE-PROMPTS P2-1"),
+    "keyvault_5/code.html": ("screens/vault/empty-states", "空状态三场景。见 PROTOTYPE-PROMPTS P2-2"),
     "keyvault_7/code.html": (
-        "component_clipboard_timer",
+        "screens/components/clipboard-timer",
         "剪贴板自动清空倒计时条。见 PROTOTYPE-PROMPTS P2-3",
     ),
-    "keyvault_8/code.html": ("modal_emergency_wipe", "紧急擦除二次确认（Future）。见 PROTOTYPE-PROMPTS Future"),
+    "keyvault_8/code.html": ("screens/modals/emergency-wipe", "紧急擦除二次确认（Future）。见 PROTOTYPE-PROMPTS Future"),
 }
 
 GLOBAL_REPLACEMENTS: list[tuple[str, str]] = [
@@ -232,26 +232,7 @@ def main() -> None:
             shutil.copy2(src_png, dest_dir / "screen.png")
             print(f"INGEST PNG:  {rel.replace('/code.html', '')}/screen.png → {canonical_dir}/")
 
-    # Sync setup_1 → legacy _1 for backward compatibility
-    setup1 = ROOT / "setup_1" / "code.html"
-    legacy1 = ROOT / "_1" / "code.html"
-    if setup1.exists():
-        legacy1.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(setup1, legacy1)
-        if (ROOT / "setup_1" / "screen.png").exists():
-            shutil.copy2(ROOT / "setup_1" / "screen.png", legacy1.parent / "screen.png")
-        print("SYNC: setup_1 → _1/")
-
-    # Update modal_new_entry as enhanced keyvault_1 reference (keep both)
-    modal_new = ROOT / "modal_new_entry" / "code.html"
-    kv1 = ROOT / "keyvault_1" / "code.html"
-    if modal_new.exists():
-        shutil.copy2(modal_new, kv1)
-        if (ROOT / "modal_new_entry" / "screen.png").exists():
-            shutil.copy2(ROOT / "modal_new_entry" / "screen.png", kv1.parent / "screen.png")
-        print("SYNC: modal_new_entry → keyvault_1/")
-
-    print("Done.")
+    print("Done. See PROTOTYPE-INDEX.md for canonical paths.")
 
 
 if __name__ == "__main__":

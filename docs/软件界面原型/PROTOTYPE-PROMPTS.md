@@ -2,7 +2,7 @@
 
 **版本:** 2026-06-04  
 **用法:** 每次生成 = 复制 **§1 公共前缀** + **§2 对应分屏提示词**，粘贴到 AI 原型设计工具。  
-**参考图（推荐）:** `keyvault_3/screen.png`、`keyvault_6/screen.png` 等同系列截图。  
+**参考图（推荐）:** `screens/vault/main/screen.png`、`screens/account/unlock/screen.png` 等同系列截图。  
 **入库:** 产出放入 `docs/软件界面原型/<目录名>/`，含 `code.html`（若工具导出）与 `screen.png`，并更新 [REQUIREMENTS-COVERAGE.md](./REQUIREMENTS-COVERAGE.md) 检查表。
 
 ## 建议生成顺序
@@ -51,7 +51,7 @@
 
 ## 2. 分屏提示词
 
-### P0-1 · Setup 第 1 步（修订 `_1` 或 `setup_1/`）
+### P0-1 · Setup 第 1 步（修订 `_1` 或 `screens/account/setup-step1-password/`）
 
 ```text
 [粘贴 §1 公共前缀]
@@ -76,7 +76,7 @@
 与现有 setup 第一步类似，但去掉「确认密码」字段（确认放在第 2 步）
 ```
 
-### P0-2 · Setup 第 2 步（`setup_2/`）
+### P0-2 · Setup 第 2 步（`screens/account/setup-step2-confirm/`）
 
 ```text
 [粘贴 §1 公共前缀]
@@ -99,7 +99,7 @@
 完成设置后进入主界面（不需画出跳转）
 ```
 
-### P0-3 · 删除确认对话框（`modal_delete/`）
+### P0-3 · 删除确认对话框（`screens/modals/delete-confirm/`）
 
 ```text
 [粘贴 §1 公共前缀]
@@ -107,7 +107,7 @@
 ## 本屏：删除条目确认 · 模态对话框
 
 ### 布局
-- 背景：主三栏界面（keyvault_3 风格）轻微 blur 遮罩 rgba(0,0,0,0.4)
+- 背景：主三栏界面（screens/vault/main 风格）轻微 blur 遮罩 rgba(0,0,0,0.4)
 - 居中模态 max-width ~420px
 
 ### 内容
@@ -121,7 +121,7 @@
 全屏新页面；英文按钮
 ```
 
-### P0-4 · 通用条目详情（`entry_detail_generic/`，SSH 示例）
+### P0-4 · 通用条目详情（`screens/vault/entry-detail-ssh/`，SSH 示例）
 
 ```text
 [粘贴 §1 公共前缀]
@@ -146,7 +146,7 @@
 此布局作为 server/identity/license/crypto/custom 等类型的通用模板，不要笔记宽屏布局
 ```
 
-### P1-1 · 解锁锁定态（`unlock_lockout/`）
+### P1-1 · 解锁锁定态（`screens/account/unlock-lockout/`）
 
 ```text
 [粘贴 §1 公共前缀]
@@ -154,7 +154,7 @@
 ## 本屏：解锁页 · 暴力破解锁定中
 
 ### 布局
-- 同 keyvault_6：TopBar + 居中卡片 max ~480px
+- 同 screens/account/unlock：TopBar + 居中卡片 max ~480px
 
 ### 状态
 - 大锁 icon
@@ -166,7 +166,7 @@
 - 不要生物识别入口（锁定期间隐藏）
 
 ### 对比
-与正常解锁页 keyvault_6 同壳层，仅内容与 disabled 态不同
+与正常解锁页 screens/account/unlock 同壳层，仅内容与 disabled 态不同
 ```
 
 ### P1-2 · 新建条目 · 10 类型（修订 `keyvault_1`）
@@ -220,7 +220,7 @@
 保留已有：自动锁定、修改主密码、导出/导入 JSON、暗色锁定、信息密度
 ```
 
-### P1-4 · 修改主密码模态（`modal_change_password/`）
+### P1-4 · 修改主密码模态（`screens/modals/change-password/`）
 
 ```text
 [粘贴 §1 公共前缀]
@@ -240,7 +240,7 @@
 内联在设置页长表单（要独立模态）
 ```
 
-### P2-1 · 回收站（`vault_trash/`）
+### P2-1 · 回收站（`screens/vault/trash/`）
 
 ```text
 [粘贴 §1 公共前缀]
@@ -256,7 +256,7 @@
 ### 空状态见 P2-2，本屏画有数据态
 ```
 
-### P2-2 · 空状态（`empty_states/`）
+### P2-2 · 空状态（`screens/vault/empty-states/`）
 
 ```text
 [粘贴 §1 公共前缀]
@@ -272,7 +272,7 @@
 保持三栏壳层，仅中间列表区为空态
 ```
 
-### P2-3 · 剪贴板倒计时条（`component_clipboard_timer/`）
+### P2-3 · 剪贴板倒计时条（`screens/components/clipboard-timer/`）
 
 ```text
 [粘贴 §1 公共前缀]
@@ -280,7 +280,7 @@
 ## 本组件：剪贴板自动清空倒计时
 
 ### 布局
-- 叠加在 keyvault_3 主界面底部或 TopBar 下方
+- 叠加在 screens/vault/main 主界面底部或 TopBar 下方
 - 细条 toast 风格：高 ~36px，全宽或居中 max ~600px
 
 ### 内容
@@ -291,7 +291,7 @@
 surface #1C2128 + border #30363D，不遮挡主操作
 ```
 
-### Future · 紧急擦除确认（`modal_emergency_wipe/`）
+### Future · 紧急擦除确认（`screens/modals/emergency-wipe/`）
 
 ```text
 [粘贴 §1 公共前缀]

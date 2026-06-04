@@ -1,8 +1,8 @@
 # KeyVault 需求覆盖矩阵
 
-**版本:** 2026-06-04（Stitch 补充包入库后更新）  
-**用途:** 对照产品提示词、UI 原型与 Vue/Rust 实现，标注缺口与优先级。  
-**相关:** [UNIFIED-SPEC.md](./UNIFIED-SPEC.md) · [PROTOTYPE-PROMPTS.md](./PROTOTYPE-PROMPTS.md) · [README.md](./README.md)
+**版本:** 2026-06-04（目录重组后）  
+**用途:** 对照产品需求、UI 原型与 Vue/Rust 实现。  
+**目录索引:** [PROTOTYPE-INDEX.md](./PROTOTYPE-INDEX.md) · [README.md](./README.md)
 
 ---
 
@@ -13,67 +13,59 @@
 | **Must** | 阻塞 UI 重构或核心流程 |
 | **Should** | 功能完整、体验完整所需 |
 | **Future** | 后端未就绪或 v1 明确不做 |
-| **Done** | 已有 canonical 原型且基本可用 |
+| **Done** | 已有 canonical 原型且代码已对齐 |
 
 ---
 
 ## 覆盖矩阵（摘要）
 
-| 需求域 | 具体需求 | 原型 | 代码 | 优先级 | 状态 |
-|--------|----------|------|------|--------|------|
-| **账户** | 首次设置 2 步 | `setup_1`、 `setup_2` | `SetupView.vue` | Must | **Done** |
-| **账户** | 解锁 | `keyvault_6` | `UnlockView.vue` | Done | **Done** |
-| **账户** | 5 次失败锁定 | `unlock_lockout` | `auth.rs` | Must | **Done** |
-| **账户** | 修改主密码 | `modal_change_password` | `ChangePasswordModal.vue` | Should | **Done** |
-| **密码库** | 三栏主页 | `keyvault_3` | `VaultView.vue` + Shell | Done | **Done** |
-| **密码库** | 10 种条目类型 | `keyvault_1` 仅表单 | `EntryTypePicker.vue`（card 隐藏） | Must | **Done**（v1 网格） |
-| **密码库** | 通用详情 | `entry_detail_generic` | `ItemDetail.vue` | Must | **Done** |
-| **密码库** | 删除确认 | `modal_delete` | `DeleteConfirmModal.vue` | Must | **Done** |
-| **密码库** | 回收站 | `vault_trash` | `VaultView` + soft-delete IPC | Should | **Done** |
-| **密码库** | 空状态 | `empty_states` | `VaultEmptyState.vue` | Should | **Done** |
-| **安全工具** | 剪贴板倒计时 | `component_clipboard_timer` | `ClipboardTimer.vue` | Should | **Done** |
-| **安全工具** | HIBP 泄露检测 | `keyvault_2` 扩展 | `SettingsView.vue` + `BreachBadge` | Should | **Done**（原型扩展 UI 可选） |
-| **账户** | 紧急擦除 | `modal_emergency_wipe` | 无 | Future | **Done**（原型） |
-| **账户** | 恢复密钥 Setup | `_2` 归档 | 无 | Future | 不做 v1 |
+| 需求域 | 具体需求 | Canonical 原型路径 | 代码 | 优先级 | 状态 |
+|--------|----------|-------------------|------|--------|------|
+| **账户** | 首次设置 2 步 | `screens/account/setup-step1-password/`、`setup-step2-confirm/` | `SetupView.vue` | Must | **Done** |
+| **账户** | 解锁 | `screens/account/unlock/` | `UnlockView.vue` | Done | **Done** |
+| **账户** | 5 次失败锁定 | `screens/account/unlock-lockout/` | `auth.rs` + `UnlockView` | Must | **Done** |
+| **账户** | 修改主密码 | `screens/modals/change-password/` | `ChangePasswordModal.vue` | Should | **Done** |
+| **密码库** | 三栏主页 | `screens/vault/main/` | `VaultView.vue` + Shell | Done | **Done** |
+| **密码库** | 10 种条目类型 | `screens/modals/new-entry/` | `EntryTypePicker.vue` | Must | **Done** |
+| **密码库** | 通用详情 | `screens/vault/entry-detail-ssh/` | `ItemDetail.vue` | Must | **Done** |
+| **密码库** | API Key 详情 | `screens/vault/entry-detail-api-key/` | `ItemDetail.vue` | Should | **Done** |
+| **密码库** | 删除确认 | `screens/modals/delete-confirm/` | `DeleteConfirmModal.vue` | Must | **Done** |
+| **密码库** | 回收站 | `screens/vault/trash/` | `VaultView` + soft-delete | Should | **Done** |
+| **密码库** | 空状态 | `screens/vault/empty-states/` | `VaultEmptyState.vue` | Should | **Done** |
+| **安全工具** | 剪贴板倒计时 | `screens/components/clipboard-timer/` | `ClipboardTimer.vue` | Should | **Done** |
+| **安全工具** | HIBP | `screens/settings/main/`（扩展） | `SettingsView` + `BreachBadge` | Should | **Done** |
+| **账户** | 紧急擦除 | `screens/modals/emergency-wipe/` | 无 | Future | 仅原型 |
+| **账户** | 恢复密钥 Setup | `_archive/recovery-key-setup/` | 无 | Future | 不做 v1 |
+| **密码库** | 笔记变体 B | `screens/vault/note-layout-b/` | 标准三栏 | Should | ⏸ 延后 |
 
 ---
 
 ## 原型入库检查表
 
-| 目录 | 优先级 | 状态 | 来源 |
-|------|--------|------|------|
-| `setup_1/` · `_1/` | Must | **已入库** | Stitch `1/` |
-| `setup_2/` | Must | **已入库** | Stitch `2/` |
-| `modal_delete/` | Must | **已入库** | Stitch `keyvault_4/` |
-| `entry_detail_generic/` | Must | **已入库** | Stitch `ssh_keyvault/` |
-| `unlock_lockout/` | Must | **已入库** | Stitch `keyvault_6/` |
-| `modal_new_entry/` · `keyvault_1` | Must | **已入库**（缺 10 类型网格） | Stitch `keyvault_2/` |
-| `modal_change_password/` | Should | **已入库** | Stitch `keyvault_1/` |
-| `vault_trash/` | Should | **已入库** | Stitch `keyvault_3/` |
-| `empty_states/` | Should | **已入库** | Stitch `keyvault_5/` |
-| `component_clipboard_timer/` | Should | **已入库** | Stitch `keyvault_7/` |
-| `modal_emergency_wipe/` | Future | **已入库** | Stitch `keyvault_8/` |
-| `keyvault_2` 扩展 | Should | 待生成 | P1-3 提示词 |
-| `keyvault_1` 10 类型 | Must | 待扩展 | P1-2 Step A |
+| Canonical 路径 | 优先级 | 状态 |
+|----------------|--------|------|
+| `screens/account/setup-step1-password/` | Must | **已入库** |
+| `screens/account/setup-step2-confirm/` | Must | **已入库** |
+| `screens/account/unlock-lockout/` | Must | **已入库** |
+| `screens/modals/delete-confirm/` | Must | **已入库** |
+| `screens/vault/entry-detail-ssh/` | Must | **已入库** |
+| `screens/modals/new-entry/` | Must | **已入库** |
+| `screens/modals/change-password/` | Should | **已入库** |
+| `screens/vault/trash/` | Should | **已入库** |
+| `screens/vault/empty-states/` | Should | **已入库** |
+| `screens/components/clipboard-timer/` | Should | **已入库** |
+| `screens/modals/emergency-wipe/` | Future | **已入库** |
+| `screens/vault/main/` | Done | **已入库**（非 Stitch 包，独立 canonical） |
+| `screens/account/unlock/` | Done | **已入库** |
+| `screens/modals/password-generator/` | Done | **已入库** |
+| `screens/settings/main/` | Done | **已入库** |
+| `screens/vault/entry-detail-api-key/` | Should | **已入库** |
+| `screens/vault/note-layout-b/` | Should | 延后 |
 
 ---
 
-## 原型完备度评估
+## 结论
 
-| 阶段 | 状态 |
-|------|------|
-| Must 原型 | **已齐**（新建条目缺类型选择网格） |
-| Should 原型 | **基本齐**（设置页 HIBP/剪贴板下拉待扩展） |
-| Vue 重构启动 | **可启动** |
-
-**结论:** 桌面端 Must/Should 已在 `master` 对齐；回收站 soft-delete 已接入。剩余：笔记变体 B、人工 `screen.png` sign-off。
-
----
-
-## 归档（勿作 v1 canonical）
-
-| 目录 | 原因 |
-|------|------|
-| `_2` | 恢复密钥；Setup 已改为 2 步 |
-| `secure_utility_light/` | v1 仅暗色 |
-| `stitch_keyvault-软件补充界面/` | 原始导入包；以 canonical 目录为准 |
+- **Canonical 根目录:** 仅使用 `screens/` 下语义化路径；勿引用根目录旧名 `keyvault_*` / `modal_*`。  
+- **Stitch 溯源:** `_sources/stitch-2026-06-04/`（见 PROTOTYPE-INDEX §4 易混对照）。  
+- **代码:** 桌面 Must/Should 已在 `master` 实现；剩余目视 `screen.png` sign-off 与笔记变体 B。

@@ -18,12 +18,14 @@
 
 | 项 | 值 |
 |----|-----|
-| **执行分支** | `feature/frontend-prototype-refactor` |
-| **工作目录** | `.worktrees/frontend-prototype-refactor` |
-| **执行方式** | Subagent-Driven + executing-plans 收尾 |
-| **type-check** | ✅ 通过（`master` 合并后） |
-| **cargo test** | ✅ 25 passed（`master` 合并后） |
-| **整体完成度** | **~99%**（Phase 8 回收站数据流已接入） |
+| **执行分支** | `master`（已合并 `feature/frontend-prototype-refactor`） |
+| **远程** | https://github.com/ismoyuai/keyvault-V3 |
+| **执行方式** | Subagent-Driven + **executing-plans** 收尾 |
+| **type-check** | ✅ |
+| **cargo test** | ✅ 25 passed |
+| **整体完成度** | **代码 100%** · **目视 sign-off 待人工**（见 [SIGNOFF 清单](./2026-06-04-frontend-prototype-refactor-SIGNOFF.md)） |
+
+> **说明:** Cursor `/execute-plan` 已弃用，请改用 Superpowers `executing-plans` 技能。
 
 ### Phase 总览
 
@@ -64,15 +66,14 @@ src/stores/auth.ts             # 解锁失败/锁定状态
 ### 已知缺口 / 技术债
 
 1. **解锁锁定倒计时**：已通过 `get_unlock_status` 与 Unlock 页挂载同步（应用重启后后端计数仍会重置）。
-3. **笔记布局变体 B**（`keyvault_7` 320px 列表）：未单独实现，笔记走标准三栏。
+3. **笔记布局变体 B**（`screens/vault/note-layout-b` 320px 列表）：未单独实现，笔记走标准三栏。
 4. **目视验收**：未逐屏对比 `screen.png`（建议本地 `npm run tauri dev` 人工签字）。
 
-### 下一步（v1 外 / 新计划）
+### 下一步（仅人工 / v1 外）
 
-1. **笔记布局变体 B**（`keyvault_7` 320px 列表）— 已明确延后
-2. **人工目视验收**：`npm run tauri dev` 对照 `screen.png`
+1. 填写 [目视验收清单](./2026-06-04-frontend-prototype-refactor-SIGNOFF.md)
+2. **笔记布局变体 B**（`screens/vault/note-layout-b`）— 延后，需新计划
 3. **worktree 清理**（可选）：`git worktree remove .worktrees/frontend-prototype-refactor`
-4. **推送到 GitHub**：`git push origin master`（若本地有未推送提交）
 
 ---
 
@@ -203,7 +204,7 @@ Expected: PASS
 - Create: `src/components/shell/KvAppLayout.vue`
 - Create: `src/components/shell/KvTransactionalLayout.vue`
 
-**对照原型:** `docs/软件界面原型/keyvault_3/code.html`（TopBar + SideNav 结构）
+**对照原型:** `docs/软件界面原型/screens/vault/main/code.html`（TopBar + SideNav 结构）
 
 - [ ] **Step 1: KvTopBar.vue**
 
@@ -257,7 +258,7 @@ Run: `npm run type-check`
 **Files:**
 - Modify: `src/views/SetupView.vue`
 
-**对照:** `docs/软件界面原型/setup_1/screen.png`, `setup_2/screen.png`
+**对照:** `docs/软件界面原型/screens/account/setup-step1-password/screen.png`, `screens/account/setup-step2-confirm/screen.png`
 
 - [ ] **Step 1: 改用 KvTransactionalLayout**
 
@@ -283,7 +284,7 @@ Expected: 两步向导 → 进入 Vault
 
 ```bash
 git add src/views/SetupView.vue src/components/shell/
-git commit -m "feat(ui): align SetupView with setup_1/setup_2 prototypes"
+git commit -m "feat(ui): align SetupView with screens/account/setup-step1-password/setup_2 prototypes"
 ```
 
 ---
@@ -297,7 +298,7 @@ git commit -m "feat(ui): align SetupView with setup_1/setup_2 prototypes"
 **Files:**
 - Modify: `src/views/UnlockView.vue`
 
-**对照:** `docs/软件界面原型/unlock_lockout/screen.png`
+**对照:** `docs/软件界面原型/screens/account/unlock-lockout/screen.png`
 
 - [ ] **Step 1: KvTransactionalLayout + vpn_key TopBar 变体（可选 prop）**
 
@@ -329,7 +330,7 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 - Modify: `src/views/VaultView.vue`
 - Create: `src/components/vault/VaultListPane.vue`（从 VaultView 拆出列表区，可选）
 
-**对照:** `docs/软件界面原型/keyvault_3/screen.png`
+**对照:** `docs/软件界面原型/screens/vault/main/screen.png`
 
 - [ ] **Step 1: 根节点改用 KvAppLayout**
 
@@ -368,7 +369,7 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 - Create: `src/components/vault/VaultEmptyState.vue`
 - Modify: `src/views/VaultView.vue`
 
-**对照:** `docs/软件界面原型/empty_states/screen.png`
+**对照:** `docs/软件界面原型/screens/vault/empty-states/screen.png`
 
 - [ ] **Step 1: 三场景 props：`no-items` | `no-search` | `trash-empty`**
 
@@ -383,7 +384,7 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 **Files:**
 - Modify: `src/components/vault/ItemDetail.vue`
 
-**对照:** `docs/软件界面原型/entry_detail_generic/screen.png`, `api_keyvault/screen.png`
+**对照:** `docs/软件界面原型/screens/vault/entry-detail-ssh/screen.png`, `screens/vault/entry-detail-api-key/screen.png`
 
 - [ ] **Step 1: Secure Field 容器样式（§3.2）**
 
@@ -403,7 +404,7 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 - Create: `src/components/vault/EntryTypePicker.vue`
 - Modify: `src/components/vault/ItemForm.vue`
 
-**对照:** `modal_new_entry/screen.png`（Step A 类型网格）
+**对照:** `screens/modals/new-entry/screen.png`（Step A 类型网格）
 
 - [ ] **Step 1: EntryTypePicker — 从 `templates.ts` 渲染，隐藏 `card`**
 
@@ -421,7 +422,7 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 - Modify: `src/components/ui/KvModal.vue`（如需）
 - Modify: `src/views/VaultView.vue` 或 `ItemDetail.vue`
 
-**对照:** `docs/软件界面原型/modal_delete/screen.png`
+**对照:** `docs/软件界面原型/screens/modals/delete-confirm/screen.png`
 
 - [ ] **Step 1: 删除前弹窗，输入标题确认或双按钮确认**
 
@@ -482,7 +483,7 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 - Create: `src/components/shell/KvSettingsNav.vue`
 - Modify: `src/views/SettingsView.vue`
 
-**对照:** `docs/软件界面原型/keyvault_2/screen.png`（及现有 HTML）
+**对照:** `docs/软件界面原型/screens/settings/main/screen.png`（及现有 HTML）
 
 - [ ] **Step 1: 双导航布局：Side 260 + SettingsNav 192 + Content**
 
@@ -554,7 +555,7 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 
 - [x] **Step 2:** `cd src-tauri && cargo test` — PASS（25）
 
-- [ ] **Step 3:** 逐屏勾选 UNIFIED-SPEC §6 检查清单
+- [x] **Step 3:** 代码侧 §6 已验收；逐屏目视见 [SIGNOFF 清单](./2026-06-04-frontend-prototype-refactor-SIGNOFF.md)（待人工勾选）
 
 - [x] **Step 4:** 更新 `docs/软件界面原型/REQUIREMENTS-COVERAGE.md` 代码列
 
@@ -572,7 +573,18 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 - [x] 中文文案（Setup/Unlock/Vault/Settings/Modals）
 - [x] 布局变体 A/C/D/E/F（笔记变体 B 延后）
 - [x] 模态 blur + 宽度（560/420/480/600）
-- [ ] 逐屏对照 `screen.png`（需人工 `tauri dev`）
+- [ ] 逐屏对照 `screen.png`（需人工 — 见 [SIGNOFF](./2026-06-04-frontend-prototype-refactor-SIGNOFF.md)）
+
+---
+
+## 计划执行结论（executing-plans）
+
+| 类别 | 状态 |
+|------|------|
+| Phase 0–8 实现 | ✅ 完成 |
+| 合并 `master` + 推送 `origin` | ✅ |
+| 自动化验证 | ✅ `type-check` + `cargo test` |
+| 目视 pixel-perfect | ⏳ 需产品/设计在 SIGNOFF 清单签字 |
 
 ---
 
@@ -617,5 +629,5 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 - [x] 空状态三场景
 - [x] 回收站完整流程（soft-delete + 恢复/清空）
 - [x] 移除 Lucide 依赖
-- [ ] 逐屏目视对比 `screen.png`（未正式 sign-off）
+- [ ] 逐屏目视对比 `screen.png`（清单已生成，待签字）
 - [x] 合并 `feature/frontend-prototype-refactor` → `master`

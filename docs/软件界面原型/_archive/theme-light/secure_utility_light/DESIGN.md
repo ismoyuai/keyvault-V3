@@ -1,5 +1,5 @@
 ---
-# 归档：v1 不实现亮色主题，仅作参考。Canonical 见 keyvault/DESIGN.md
+# 归档：v1 不实现亮色主题，仅作参考。Canonical 见 design-system/DESIGN.md
 name: Secure Utility Light
 colors:
   surface: '#f7f9fb'

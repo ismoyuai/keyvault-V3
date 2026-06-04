@@ -16,7 +16,7 @@ AI 原型在视觉方向上一致（GitHub Dark + Inter + JetBrains Mono），�
 | C | 侧栏 | 底部 Settings/Lock：纯图标 vs 文字链；选中态 border-l-2 vs border-r-2 vs 全边框 | 导航交互不统一 |
 | D | 语言 | lang=en 与 lang=zh-CN 混用；UI 文案中英混杂 | i18n 与产品调性 |
 | E | 布局变体 | 笔记视图中间栏 320px vs 标准 flex；设置页双导航 | 需明确为「变体」非错误 |
-| F | 重复原型 | keyvault_5 ≈ keyvault_3；keyvault_8 ≈ keyvault_6 | 开发引用混乱 |
+| F | 重复原型 | keyvault_5 ≈ keyvault_3；keyvault_8 ≈ screens/account/unlock | 开发引用混乱 |
 | G | 流程缺口 | Setup 已改为 2 步；`setup_2` 等待生成 | 见 REQUIREMENTS-COVERAGE |
 
 ---
@@ -84,7 +84,7 @@ AI 原型在视觉方向上一致（GitHub Dark + Inter + JetBrains Mono），�
 |------|-------------|
 | Setup `_1` | 同标准 TopBar + `vpn_key` 可选 |
 | Setup `_2` | **已归档 Future**（恢复密钥）；v1 用 `_1` + `setup_2` |
-| Unlock `keyvault_6` | h-12 → **统一 h-10**；保留窗口控件 |
+| Unlock `screens/account/unlock` | h-12 → **统一 h-10**；保留窗口控件 |
 | Unlock `keyvault_8` | 无窗口控件（紧凑变体，仅作窄屏参考） |
 | Settings `keyvault_2` | 无主 TopBar；窗口控件在内容区顶栏 h-10 |
 
@@ -142,7 +142,7 @@ class="w-full bg-primary-container text-[#0D1117] font-bold
 </div>
 ```
 
-`keyvault_3/5` 的纯图标底部改为上述文字链（已在规范层明确，HTML 重构阶段同步）。
+`screens/vault/main/5` 的纯图标底部改为上述文字链（已在规范层明确，HTML 重构阶段同步）。
 
 ### 2.5 布局变体（均为 intentional）
 
@@ -157,7 +157,7 @@ class="w-full bg-primary-container text-[#0D1117] font-bold
 └──────────┴─────────────────────┴─────────────────────────┘
 ```
 
-- **Canonical 原型:** `keyvault_3`（含命令面板）, `api_keyvault`
+- **Canonical 原型:** `screens/vault/main/`（含命令面板）, `api_keyvault`
 - `keyvault_5` = `_3` 去掉命令面板，**不作为独立设计**
 
 #### 变体 B — 笔记三栏（Secure Notes）
@@ -166,7 +166,7 @@ class="w-full bg-primary-container text-[#0D1117] font-bold
 Side 260px | List 320px fixed | Detail flex (阅读区 max 800px)
 ```
 
-- **Canonical 原型:** `keyvault_7`
+- **Canonical 原型:** `screens/vault/note-layout-b`
 - 详情区：Markdown 文档排版 + 水印 + 代码块复制
 
 #### 变体 C — 设置双导航
@@ -183,14 +183,14 @@ Side 260px (全局) | SettingsNav 192px | Content flex (max-w-3xl 居中内容)
 | Step | 布局 | 原型 |
 |------|------|------|
 | 1 主密码 | 无侧栏，居中卡片 max-w-lg | `_1`（STEP 1 OF 2） |
-| 2 确认 | 同 Step 1 壳层 | `setup_2/` **待生成**（见 PROTOTYPE-PROMPTS P0-2） |
+| 2 确认 | 同 Step 1 壳层 | `screens/account/setup-step2-confirm/` **待生成**（见 PROTOTYPE-PROMPTS P0-2） |
 
 ~~原 `_2` 恢复密钥流程~~ 已归档至 `_archive/`，Future 功能。
 
 #### 变体 E — 解锁（Transactional）
 
 - 无侧栏；居中卡片 max-w-[480px]
-- **Canonical:** `keyvault_6`
+- **Canonical:** `screens/account/unlock`
 - **Compact variant:** `keyvault_8`（footer 外置、无窗口按钮）
 
 #### 变体 F — 模态
@@ -199,7 +199,7 @@ Side 260px (全局) | SettingsNav 192px | Content flex (max-w-3xl 居中内容)
 |------|------|------|
 | 新建条目 | max-w-[560px] | `keyvault_1` |
 | 密码生成器 | max-w-[480px] | `keyvault_4` |
-| 命令面板 | max-w-[600px] | `keyvault_3` 叠加层 |
+| 命令面板 | max-w-[600px] | `screens/vault/main/` 叠加层 |
 
 遮罩：`bg-background/80 backdrop-blur-md`
 
@@ -254,20 +254,22 @@ Side 260px (全局) | SettingsNav 192px | Content flex (max-w-3xl 居中内容)
 |------|------|------|
 | `keyvault_5` | ✅ | 标注 DUPLICATE；导航中文化 |
 | `keyvault_8` | ✅ | 标注 VARIANT；解锁文案中文化 |
-| `keyvault_6` | ✅ | 解锁文案中文化 |
+| `screens/account/unlock` | ✅ | 解锁文案中文化 |
 | `api_keyvault` | ✅ | lang zh-CN；导航中文化 |
 | `keyvault_1` | ✅ | lang zh-CN；模态表单中文化 |
-| `keyvault_7` | ✅ | lang zh-CN；导航中文化；选中态 border-l-2 |
-| `keyvault_2/3/4` | ✅ | CANONICAL 注释 + 导航中文化 |
+| `screens/vault/note-layout-b` | ✅ | lang zh-CN；导航中文化；选中态 border-l-2 |
+| `screens/settings/main/3/4` | ✅ | CANONICAL 注释 + 导航中文化 |
 | `_1/_2` | ✅ | CANONICAL 注释 |
-| `keyvault/DESIGN.md` | ✅ | YAML 色值与语义层对齐 |
+| `design-system/DESIGN.md` | ✅ | YAML 色值与语义层对齐 |
 | `_shared/tailwind-extend.json` | ✅ | 共享令牌 |
 | `_shared/apply-unification.py` | ✅ | 批量文案统一脚本（可重复运行） |
 | `secure_utility_light/DESIGN.md` | ✅ | 标注 v1 归档 |
 
 **待 Phase 2（非阻塞）：** HTML 内硬编码 hex 改为语义类；按 [PROTOTYPE-PROMPTS.md](./PROTOTYPE-PROMPTS.md) 补缺口原型。
 
-**文档（2026-06-04）：** [REQUIREMENTS-COVERAGE.md](./REQUIREMENTS-COVERAGE.md) · [PROTOTYPE-PROMPTS.md](./PROTOTYPE-PROMPTS.md) · [_archive/README.md](./_archive/README.md)
+**文档（2026-06-04）：** [PROTOTYPE-INDEX.md](./PROTOTYPE-INDEX.md) · [REQUIREMENTS-COVERAGE.md](./REQUIREMENTS-COVERAGE.md) · [PROTOTYPE-PROMPTS.md](./PROTOTYPE-PROMPTS.md) · [_archive/README.md](./_archive/README.md)
+
+**目录（2026-06-04 重组）：** Canonical 原型仅位于 `screens/<分类>/<语义名>/`；旧根目录名见 [PROTOTYPE-INDEX.md §4](./PROTOTYPE-INDEX.md#4-旧目录名--新路径迁移对照)。
 
 ---
 
@@ -308,9 +310,9 @@ Side 260px (全局) | SettingsNav 192px | Content flex (max-w-3xl 居中内容)
 
 | 保留 | 合并自 / 归档 | 说明 |
 |------|----------------|------|
-| keyvault_3 | keyvault_5 | 命令面板 overlay |
-| keyvault_6 | keyvault_8 | 窗口控件、尺寸 |
+| screens/vault/main | keyvault_5 | 命令面板 overlay |
+| screens/account/unlock | keyvault_8 | 窗口控件、尺寸 |
 | `_1` + setup_2 | `_2` | v1 两步入门 vs 恢复密钥 Future |
-| keyvault/DESIGN.md | secure_utility_light | v1 仅暗色 |
+| design-system/DESIGN.md | secure_utility_light | v1 仅暗色 |
 
 完整归档索引：[_archive/README.md](./_archive/README.md)

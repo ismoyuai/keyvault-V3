@@ -23,18 +23,18 @@
 | 0 | — | tokens + shell | ✅ |
 | 1 | `setup_1` + `setup_2` | `SetupView.vue` | ✅ |
 | 2 | `unlock_lockout` | `UnlockView.vue` | ✅ |
-| 3 | `keyvault_3` | `VaultView.vue` | ✅ |
+| 3 | `screens/vault/main/` | `VaultView.vue` | ✅ |
 | 4 | `empty_states` | `VaultEmptyState.vue` | ✅ |
 | 5 | `modal_new_entry` | `ItemForm` + `EntryTypePicker` | ✅ |
 | 6 | `entry_detail_generic` | `ItemDetail.vue` | ✅ |
-| 7 | `modal_delete` | `DeleteConfirmModal.vue` | ✅ |
+| 7 | `screens/modals/delete-confirm/` | `DeleteConfirmModal.vue` | ✅ |
 | 8 | `keyvault_4` | `PasswordGenerator.vue` | ✅ |
-| 9 | `keyvault_7` | 笔记变体 B | ⏸ 延后（标准三栏） |
+| 9 | `screens/vault/note-layout-b` | 笔记变体 B | ⏸ 延后（标准三栏） |
 | 10 | `vault_trash` | Vault trash 视图 | ✅ soft-delete + 恢复/清空 |
 | 11 | `keyvault_2` | `SettingsView.vue` | ✅ |
 | 12 | `modal_change_password` | `ChangePasswordModal.vue` | ✅ |
 | 13 | `component_clipboard_timer` | `ClipboardTimer.vue` | ✅ |
-| 14 | `keyvault_3` overlay | `CommandPalette.vue` | ✅ |
+| 14 | `screens/vault/main/` overlay | `CommandPalette.vue` | ✅ |
 
 ---
 
@@ -164,19 +164,19 @@ src/styles/
 |------|----------|----------|----------|------|
 | 0 | — | `tokens.css`, shell | 基础 | ✅ |
 | 1 | `setup_1` + `setup_2` | `SetupView.vue` | D | ✅ |
-| 2 | `unlock_lockout` / `keyvault_6` | `UnlockView.vue` | E | ✅ |
-| 3 | `keyvault_3` | `VaultView.vue` | A | ✅ |
+| 2 | `unlock_lockout` / `screens/account/unlock` | `UnlockView.vue` | E | ✅ |
+| 3 | `screens/vault/main/` | `VaultView.vue` | A | ✅ |
 | 4 | `empty_states` | `VaultView` 列表区 | A | ✅ |
 | 5 | `modal_new_entry` / `keyvault_1` | `ItemForm.vue` | F | ✅ |
 | 6 | `entry_detail_generic` / `api_keyvault` | `ItemDetail.vue` | A | ✅ |
-| 7 | `modal_delete` | `DeleteConfirmModal` | F | ✅ |
+| 7 | `screens/modals/delete-confirm/` | `DeleteConfirmModal` | F | ✅ |
 | 8 | `keyvault_4` | `PasswordGenerator.vue` | F | ✅ |
-| 9 | `keyvault_7` | Note 布局（VaultView 分支） | B | ⏸ 延后 |
+| 9 | `screens/vault/note-layout-b` | Note 布局（VaultView 分支） | B | ⏸ 延后 |
 | 10 | `vault_trash` | VaultView trash 视图 | A | ✅ UI stub；数据待 soft-delete API |
 | 11 | `keyvault_2` + 扩展 | `SettingsView.vue` | C | ✅ |
 | 12 | `modal_change_password` | `ChangePasswordModal.vue` | F | ✅ |
 | 13 | `component_clipboard_timer` | `ClipboardTimer.vue` | 组件 | ✅ |
-| 14 | `keyvault_3` overlay | `CommandPalette.vue` | F | ✅ |
+| 14 | `screens/vault/main/` overlay | `CommandPalette.vue` | F | ✅ |
 
 ---
 

@@ -1,76 +1,66 @@
 # KeyVault UI 原型索引
 
-> **重构前必读:** [UNIFIED-SPEC.md](./UNIFIED-SPEC.md) · [REQUIREMENTS-COVERAGE.md](./REQUIREMENTS-COVERAGE.md)  
-> **补缺口原型:** [PROTOTYPE-PROMPTS.md](./PROTOTYPE-PROMPTS.md)（桌面）· [EXTENSION-PROTOTYPE-PROMPTS.md](./EXTENSION-PROTOTYPE-PROMPTS.md)（扩展）  
-> **Stitch 入库:** [stitch_keyvault-软件补充界面/README.md](./stitch_keyvault-软件补充界面/README.md)  
-> **设计令牌:** [keyvault/DESIGN.md](./keyvault/DESIGN.md) · [_shared/tailwind-extend.json](./_shared/tailwind-extend.json)
+> **重构必读:** [UNIFIED-SPEC.md](./UNIFIED-SPEC.md) · [REQUIREMENTS-COVERAGE.md](./REQUIREMENTS-COVERAGE.md) · [PROTOTYPE-INDEX.md](./PROTOTYPE-INDEX.md)（目录关系与旧名映射）
 
-## 文档
+## 快速定位
 
-| 文件 | 说明 |
+| 需求 | 路径 |
 |------|------|
-| `keyvault/DESIGN.md` | 主规范（暗色，v1 唯一主题） |
-| `UNIFIED-SPEC.md` | 壳层、布局、组件 canonical 决策 |
-| `REQUIREMENTS-COVERAGE.md` | 产品需求 ↔ 原型 ↔ 代码覆盖矩阵 |
-| `PROTOTYPE-PROMPTS.md` | 桌面缺口界面 AI 补图提示词 |
-| `EXTENSION-PROTOTYPE-PROMPTS.md` | 浏览器扩展 AI 提示词 |
-| `_shared/ingest-stitch-prototypes.py` | Stitch 补充包入库脚本 |
-| `_archive/README.md` | 归档原型说明 |
+| 所有 canonical 屏幕 | [`screens/`](./screens/) |
+| 设计令牌 | [`design-system/DESIGN.md`](./design-system/DESIGN.md) |
+| Stitch 原始包 | [`_sources/stitch-2026-06-04/`](./_sources/stitch-2026-06-04/) |
+| 归档 / 重复 | [`_archive/`](./_archive/) |
+| 补缺口 AI 提示词 | [PROTOTYPE-PROMPTS.md](./PROTOTYPE-PROMPTS.md) |
+| 浏览器扩展 | [EXTENSION-PROTOTYPE-PROMPTS.md](./EXTENSION-PROTOTYPE-PROMPTS.md) |
 
-## Canonical 原型（已入库）
+## Canonical 屏幕（`screens/`）
 
-| 目录 | 界面 | Vue 目标 |
+| 路径 | 界面 | Vue 目标 |
 |------|------|----------|
-| `setup_1/` · `_1/` | Setup 第 1 步 | `SetupView.vue` |
-| `setup_2/` | Setup 第 2 步 | `SetupView.vue` |
-| `keyvault_6` | 解锁 | `UnlockView.vue` |
-| `unlock_lockout/` | 解锁锁定态 | `UnlockView.vue` |
-| `keyvault_3` | 主界面 + 命令面板 | `VaultView.vue` |
-| `modal_delete/` | 删除确认 | `KvModal` |
-| `entry_detail_generic/` | 通用详情（SSH） | `ItemDetail.vue` |
-| `api_keyvault` | API Key 详情 | `ItemDetail.vue` |
-| `keyvault_7` | 安全笔记 | Note 变体 |
-| `keyvault_1/` · `modal_new_entry/` | 新建网站密码 | `ItemForm.vue` |
-| `modal_change_password/` | 修改主密码 | `SettingsView.vue` |
-| `keyvault_4` | 密码生成器 | `PasswordGenerator.vue` |
-| `keyvault_2` | 设置 Bento | `SettingsView.vue` |
-| `vault_trash/` | 回收站 | `VaultView` trash 路由 |
-| `empty_states/` | 空状态三场景 | 列表/搜索/回收站 |
-| `component_clipboard_timer/` | 剪贴板倒计时 | `ClipboardTimer.vue` |
-| `modal_emergency_wipe/` | 紧急擦除 Future | — |
+| `screens/account/setup-step1-password/` | Setup 第 1 步 | `SetupView.vue` |
+| `screens/account/setup-step2-confirm/` | Setup 第 2 步 | `SetupView.vue` |
+| `screens/account/unlock/` | 解锁 | `UnlockView.vue` |
+| `screens/account/unlock-lockout/` | 解锁锁定 | `UnlockView.vue` |
+| `screens/vault/main/` | 主界面 + 命令面板 | `VaultView.vue` |
+| `screens/vault/trash/` | 回收站 | `VaultView` |
+| `screens/vault/empty-states/` | 空状态 | `VaultEmptyState.vue` |
+| `screens/vault/entry-detail-ssh/` | 通用详情 | `ItemDetail.vue` |
+| `screens/vault/entry-detail-api-key/` | API Key 详情 | `ItemDetail.vue` |
+| `screens/vault/note-layout-b/` | 笔记变体 B | ⏸ 延后 |
+| `screens/modals/new-entry/` | 新建条目 | `ItemForm.vue` |
+| `screens/modals/delete-confirm/` | 删除确认 | `DeleteConfirmModal.vue` |
+| `screens/modals/change-password/` | 修改主密码 | `ChangePasswordModal.vue` |
+| `screens/modals/password-generator/` | 密码生成器 | `PasswordGenerator.vue` |
+| `screens/modals/emergency-wipe/` | 紧急擦除 | Future |
+| `screens/settings/main/` | 设置 | `SettingsView.vue` |
+| `screens/components/clipboard-timer/` | 剪贴板倒计时 | `ClipboardTimer.vue` |
 
-## 待生成 / 待扩展
+完整关系图与 **旧目录名对照** 见 [PROTOTYPE-INDEX.md](./PROTOTYPE-INDEX.md)。
 
-| 目录 | 优先级 | 说明 |
-|------|--------|------|
-| `keyvault_1` 10 类型网格 | Must | 新建模态需补类型选择 Step A（见 P1-2） |
-| `keyvault_2` 扩展 | Should | HIBP 泄露检测、剪贴板设置（见 P1-3） |
-| `extension/*` | P0+ | 见 EXTENSION-PROTOTYPE-PROMPTS.md |
+## 工具脚本
 
-## 浏览器扩展原型（待生成）
+| 脚本 | 用途 |
+|------|------|
+| `_shared/ingest-stitch-prototypes.py` | Stitch 包 → `screens/` |
+| `_shared/apply-unification.py` | 批量文案/色值统一 |
 
-见 [EXTENSION-PROTOTYPE-PROMPTS.md](./EXTENSION-PROTOTYPE-PROMPTS.md) → `extension/` 子目录。
-
-## 归档（勿作 v1 实现依据）
-
-见 [_archive/README.md](./_archive/README.md)：`_2`（恢复密钥）、`secure_utility_light/`（浅色）。
-
-> 注：原归档的 `keyvault_5`/`keyvault_8` 已由 Stitch 包重新定义为 `empty_states`/`modal_emergency_wipe` canonical。
-
-## 布局变体
-
+```bash
+python docs/软件界面原型/_shared/ingest-stitch-prototypes.py
 ```
-标准三栏:     TopBar 40px | Side 260px | List flex | Detail 400px
-笔记三栏:     TopBar 40px | Side 260px | List 320px | Detail flex
-设置双导航:   Side 260px | SettingsNav 192px | Content flex
-Setup:        TopBar 40px | 居中卡片（2 步，无侧栏）
-解锁:         TopBar 40px | 居中卡片 max ~480px
-模态:         新建 560px | 生成器 480px | 删除 420px
-```
+
+## 布局变体（UNIFIED-SPEC）
+
+| 变体 | 说明 |
+|------|------|
+| A | 标准三栏：侧栏 260 + 列表 flex + 详情 400 |
+| B | 笔记：列表 320 + 详情 flex（`note-layout-b`，v1 延后） |
+| C | 设置：SettingsNav 192 + 内容区 |
+| D/E | Setup / Unlock 居中卡片 |
+| F | 模态：新建 560 / 删除 420 / 生成器 480 |
 
 ## 入库流程
 
-1. AI 生成 → `docs/软件界面原型/<目录>/`（`code.html` + `screen.png`）
-2. HTML 顶部加 `<!-- CANONICAL: ... -->`
-3. 运行 `python _shared/apply-unification.py` 或 `ingest-stitch-prototypes.py`
-4. 更新 [REQUIREMENTS-COVERAGE.md](./REQUIREMENTS-COVERAGE.md)
+1. 生成 `code.html` + `screen.png` 到目标 `screens/.../` 目录  
+2. HTML 顶部加 `<!-- CANONICAL: ... -->`  
+3. 运行统一脚本（若来自 Stitch，先 `ingest-stitch-prototypes.py`）  
+4. 更新 [REQUIREMENTS-COVERAGE.md](./REQUIREMENTS-COVERAGE.md) 与 [PROTOTYPE-INDEX.md](./PROTOTYPE-INDEX.md)

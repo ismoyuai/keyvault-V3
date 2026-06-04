@@ -2,7 +2,7 @@
 
 **版本:** 2026-06-04  
 **用法:** 每次生成 = 复制 **§1 公共前缀** + **§2 对应分屏提示词**，粘贴到 AI 原型设计工具。  
-**参考图（推荐）:** 桌面 `keyvault_3/screen.png`、`keyvault_6/screen.png`（色值与密度对齐）；已有实现 `extension/popup/popup.css`。  
+**参考图（推荐）:** 桌面 `screens/vault/main/screen.png`、`screens/account/unlock/screen.png`（色值与密度对齐）；已有实现 `extension/popup/popup.css`。  
 **入库:** 产出放入 `docs/软件界面原型/extension/<目录名>/`，含 `code.html`（若工具导出）与 `screen.png`。
 
 ## 与桌面原型的关系
@@ -408,11 +408,11 @@ Future 功能，MVP 可不实现
 ### 验收要点
 
 - [ ] Popup 宽度 **360px**，Header/Footer 高度与 `popup.css` 一致（~36px）
-- [ ] 色值与 [UNIFIED-SPEC.md](./UNIFIED-SPEC.md) / [keyvault/DESIGN.md](./keyvault/DESIGN.md) 一致
+- [ ] 色值与 [UNIFIED-SPEC.md](./UNIFIED-SPEC.md) / [design-system/DESIGN.md](./design-system/DESIGN.md) 一致
 - [ ] 网页内组件在 **mock 登录页** 上展示，而非孤立控件
 - [ ] 全中文案；状态三色：绿已连接 / 灰未连接 / 黄锁定
 - [ ] 更新 [REQUIREMENTS-COVERAGE.md](./REQUIREMENTS-COVERAGE.md) 扩展章节（若已添加）
 
 ### 与桌面原型联调
 
-生成 Popup 类时，可同时打开 `keyvault_3/screen.png` 作为色板参考；生成网页内浮层时，注意 KV 图标 `#58A6FF` 与桌面主色一致（代码中 `#388bfd` 为同色系，原型统一用 #58A6FF）。
+生成 Popup 类时，可同时打开 `screens/vault/main/screen.png` 作为色板参考；生成网页内浮层时，注意 KV 图标 `#58A6FF` 与桌面主色一致（代码中 `#388bfd` 为同色系，原型统一用 #58A6FF）。
