@@ -36,3 +36,5 @@ src-tauri/gen/
 
 # Superpowers plugin cache
 .superpowers/
+
+stitch_keyvault.zip

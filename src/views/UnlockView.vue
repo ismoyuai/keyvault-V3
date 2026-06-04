@@ -2,9 +2,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
 
 const router = useRouter()
 const auth = useAuthStore()
+const settings = useSettingsStore()
 const password = ref('')
 const isShaking = ref(false)
 
@@ -12,6 +14,7 @@ async function handleUnlock() {
   if (!password.value) return
   const success = await auth.unlock(password.value)
   if (success) {
+    await settings.load()
     router.push('/vault')
   } else {
     isShaking.value = true

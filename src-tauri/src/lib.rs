@@ -14,6 +14,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
 
@@ -30,7 +32,7 @@ pub fn run() {
             let db_path_str = format!("sqlite:{}?mode=rwc", db_path.display());
 
             // 在异步上下文中初始化数据库
-            let rt = tokio::runtime::Handle::current();
+            let rt = tokio::runtime::Runtime::new().expect("无法创建 Tokio 运行时");
             let pool = rt.block_on(async {
                 db::init_db(&db_path_str)
                     .await

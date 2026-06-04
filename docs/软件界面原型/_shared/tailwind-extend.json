@@ -1,0 +1,71 @@
+{
+  "$comment": "Canonical Tailwind theme.extend for all KeyVault HTML prototypes. Copy into tailwind.config theme.extend.",
+  "colors": {
+    "background": "#0D1117",
+    "on-background": "#DAE3EE",
+    "surface": "#161B22",
+    "surface-dim": "#0D1117",
+    "surface-bright": "#21262D",
+    "surface-container-lowest": "#0D1117",
+    "surface-container-low": "#161B22",
+    "surface-container": "#1C2128",
+    "surface-container-high": "#21262D",
+    "surface-container-highest": "#2D333B",
+    "surface-variant": "#21262D",
+    "on-surface": "#E6EDF3",
+    "on-surface-variant": "#8B949E",
+    "outline": "#8B919D",
+    "outline-variant": "#30363D",
+    "border-hairline": "#30363D",
+    "primary": "#A2C9FF",
+    "on-primary": "#0D1117",
+    "primary-container": "#58A6FF",
+    "on-primary-container": "#0D1117",
+    "primary-fixed": "#D3E4FF",
+    "secondary": "#3FB950",
+    "secondary-container": "#3FB950",
+    "on-secondary-container": "#0D1117",
+    "tertiary": "#FFBA42",
+    "tertiary-container": "#DA9600",
+    "error": "#F85149",
+    "error-container": "#490202",
+    "on-error-container": "#FFB4AB"
+  },
+  "borderRadius": {
+    "DEFAULT": "4px",
+    "sm": "2px",
+    "md": "6px",
+    "lg": "8px",
+    "xl": "12px",
+    "full": "9999px"
+  },
+  "spacing": {
+    "base": "4px",
+    "xs": "4px",
+    "sm": "8px",
+    "md": "16px",
+    "lg": "24px",
+    "xl": "40px",
+    "sidebar-width": "260px",
+    "list-notes-width": "320px",
+    "detail-panel-width": "400px",
+    "settings-nav-width": "192px",
+    "titlebar-height": "40px"
+  },
+  "fontFamily": {
+    "headline-lg": ["Inter", "sans-serif"],
+    "headline-md": ["Inter", "sans-serif"],
+    "body-md": ["Inter", "sans-serif"],
+    "body-sm": ["Inter", "sans-serif"],
+    "label-caps": ["Inter", "sans-serif"],
+    "code-md": ["JetBrains Mono", "monospace"]
+  },
+  "fontSize": {
+    "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+    "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+    "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+    "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+    "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+    "code-md": ["13px", { "lineHeight": "20px", "fontWeight": "400" }]
+  }
+}

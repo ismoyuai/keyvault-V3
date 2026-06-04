@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<!-- CANONICAL: 新建条目模态。见 UNIFIED-SPEC.md §2.5 变体 F -->
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeyVault - 新建条目</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-fixed": "#ffddaf",
+                        "on-primary-container": "#003a6b",
+                        "outline-variant": "#414752",
+                        "on-background": "#dae3ee",
+                        "inverse-primary": "#0060aa",
+                        "outline": "#8b919d",
+                        "secondary-fixed": "#83fc89",
+                        "tertiary-container": "#da9600",
+                        "on-tertiary-fixed-variant": "#614000",
+                        "on-secondary-container": "#00320a",
+                        "on-primary-fixed-variant": "#004882",
+                        "tertiary": "#ffba42",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#141c24",
+                        "on-tertiary-fixed": "#281800",
+                        "secondary-container": "#27a640",
+                        "secondary-fixed-dim": "#67df70",
+                        "on-primary-fixed": "#001c38",
+                        "inverse-on-surface": "#29313a",
+                        "surface-variant": "#2d363e",
+                        "on-secondary": "#00390d",
+                        "background": "#0b141c",
+                        "surface-bright": "#313a43",
+                        "surface": "#0b141c",
+                        "surface-dim": "#0b141c",
+                        "surface-container-high": "#222b33",
+                        "surface-tint": "#a2c9ff",
+                        "surface-container-lowest": "#060f16",
+                        "on-primary": "#00315c",
+                        "primary-container": "#58a6ff",
+                        "primary": "#a2c9ff",
+                        "on-surface-variant": "#c0c7d4",
+                        "inverse-surface": "#dae3ee",
+                        "on-secondary-fixed": "#002105",
+                        "on-tertiary": "#432c00",
+                        "surface-container": "#182028",
+                        "secondary": "#67df70",
+                        "primary-fixed-dim": "#a2c9ff",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-highest": "#2d363e",
+                        "on-surface": "#dae3ee",
+                        "primary-fixed": "#d3e4ff",
+                        "on-secondary-fixed-variant": "#005317",
+                        "on-tertiary-container": "#4f3400",
+                        "on-error": "#690005",
+                        "tertiary-fixed-dim": "#ffba42",
+                        "error": "#ffb4ab",
+                        
+                        // Adding custom modal overlay color based on design guidance
+                        "overlay": "#1C2128",
+                        "border-hairline": "#30363D"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.125rem",
+                        lg: "0.25rem",
+                        xl: "0.5rem",
+                        full: "0.75rem"
+                    },
+                    spacing: {
+                        "sidebar-width": "260px",
+                        lg: "24px",
+                        base: "4px",
+                        xs: "4px",
+                        xl: "40px",
+                        "detail-panel-width": "400px",
+                        sm: "8px",
+                        md: "16px"
+                    },
+                    fontFamily: {
+                        "code-md": ["JetBrains Mono", "monospace"],
+                        "body-md": ["Inter", "sans-serif"],
+                        "headline-md": ["Inter", "sans-serif"],
+                        "body-sm": ["Inter", "sans-serif"],
+                        "label-caps": ["Inter", "sans-serif"],
+                        "headline-lg": ["Inter", "sans-serif"]
+                    },
+                    fontSize: {
+                        "code-md": ["13px", { lineHeight: "20px", fontWeight: "400" }],
+                        "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                        "headline-md": ["18px", { lineHeight: "24px", letterSpacing: "-0.01em", fontWeight: "600" }],
+                        "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+                        "label-caps": ["11px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "700" }],
+                        "headline-lg": ["24px", { lineHeight: "32px", letterSpacing: "-0.02em", fontWeight: "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #2d363e;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #414752;
+        }
+        
+        /* Progress bar animation */
+        @keyframes fillProgress {
+            from { width: 0; }
+            to { width: 75%; }
+        }
+        .strength-animate {
+            animation: fillProgress 0.5s ease-out forwards;
+        }
+        
+        /* Focus styles for inputs */
+        .secure-input:focus-within {
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen relative flex overflow-hidden">
+<!-- Mock Background (Vault Main Page) - Blurred out -->
+<div class="absolute inset-0 z-0 flex w-full h-full filter blur-md opacity-50 pointer-events-none">
+<!-- TopAppBar (Hidden on desktop per design system, but showing side nav) -->
+<div class="hidden md:flex flex-col h-full bg-surface-container-low border-r border-outline-variant w-sidebar-width py-md transition-all duration-150 ease-in-out">
+<div class="px-md mb-6">
+<div class="font-headline-md text-headline-md text-primary font-bold">KeyVault Pro</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Local Vault</div>
+</div>
+<div class="px-md mb-6">
+<button class="w-full bg-primary-container text-background py-2 px-4 rounded-DEFAULT font-body-md font-semibold flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    新建条目
+                </button>
+</div>
+<nav class="flex-1 px-sm">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-primary font-bold border-r-2 border-primary bg-surface-variant" href="#">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-body-md text-body-md">全部条目</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-on-surface-variant font-body-md" href="#">
+<span class="material-symbols-outlined text-[18px]">star</span>
+<span class="font-body-md text-body-md">收藏</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-on-surface-variant font-body-md" href="#">
+<span class="material-symbols-outlined text-[18px]">key</span>
+<span class="font-body-md text-body-md">密码</span>
+</a>
+</li>
+</ul>
+</nav>
+</div>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col h-full">
+<header class="h-14 border-b border-outline-variant flex items-center px-6 justify-between bg-background">
+<h1 class="font-headline-lg text-headline-lg">全部条目</h1>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+<input class="bg-surface-container-high border-border-hairline border rounded-DEFAULT pl-9 pr-4 py-1.5 text-body-md focus:outline-none w-64 text-on-background" placeholder="搜索..." type="text"/>
+</div>
+</div>
+</header>
+<main class="flex-1 p-6">
+<div class="space-y-2">
+<div class="flex items-center justify-between p-3 border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-DEFAULT bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">language</span>
+</div>
+<div>
+<div class="font-headline-md text-headline-md text-sm">github.com</div>
+<div class="font-code-md text-code-md text-on-surface-variant">dev@example.com</div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between p-3 border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-DEFAULT bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">language</span>
+</div>
+<div>
+<div class="font-headline-md text-headline-md text-sm">aws.amazon.com</div>
+<div class="font-code-md text-code-md text-on-surface-variant">admin@example.com</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+<!-- Modal Overlay -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
+<!-- New Entry Modal Panel (Level 2 Overlay) -->
+<div aria-labelledby="modal-title" aria-modal="true" class="w-full max-w-[560px] bg-surface-container border border-border-hairline rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col max-h-[921px] overflow-hidden" role="dialog">
+<!-- Header -->
+<div class="flex items-center justify-between px-6 py-4 border-b border-border-hairline bg-surface-container-low shrink-0">
+<h2 class="font-headline-md text-headline-md text-on-background flex items-center gap-2" id="modal-title">
+<span class="material-symbols-outlined text-[20px] text-primary">add_box</span>
+                    新建条目
+                </h2>
+<button aria-label="关闭" class="text-on-surface-variant hover:text-on-background transition-colors p-1 rounded-DEFAULT hover:bg-surface-variant">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Form Body (Scrollable) -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+<!-- Entry Type Selector (Segmented Control style) -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">条目类型</label>
+<div class="flex bg-surface-container-high border border-border-hairline rounded-DEFAULT p-1 gap-1">
+<button class="flex-1 py-1.5 px-3 rounded-sm bg-surface-variant text-on-background font-body-md text-sm flex items-center justify-center gap-1.5 border border-border-hairline shadow-sm">
+<span class="material-symbols-outlined text-[16px]">language</span>
+                            登录凭据
+                        </button>
+<button class="flex-1 py-1.5 px-3 rounded-sm text-on-surface-variant hover:text-on-background font-body-md text-sm flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[16px]">code</span>
+                            API 密钥
+                        </button>
+<button class="flex-1 py-1.5 px-3 rounded-sm text-on-surface-variant hover:text-on-background font-body-md text-sm flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[16px]">description</span>
+                            笔记
+                        </button>
+<button class="flex-1 py-1.5 px-3 rounded-sm text-on-surface-variant hover:text-on-background font-body-md text-sm flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[16px]">credit_card</span>
+                            银行卡
+                        </button>
+</div>
+</div>
+<div class="w-full h-px bg-border-hairline"></div>
+<!-- Main Fields -->
+<div class="space-y-4">
+<!-- Title -->
+<div class="space-y-1.5">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block" for="entry-title">标题</label>
+<div class="secure-input flex items-center bg-surface-container-low border border-border-hairline rounded-DEFAULT transition-all duration-200">
+<div class="pl-3 pr-2 text-on-surface-variant flex items-center">
+<span class="material-symbols-outlined text-[18px]">title</span>
+</div>
+<input class="flex-1 bg-transparent border-none py-2 px-2 font-body-md text-on-background focus:ring-0 focus:outline-none placeholder:text-outline-variant" id="entry-title" placeholder="例如：GitHub 个人账号" type="text"/>
+</div>
+</div>
+<!-- URL -->
+<div class="space-y-1.5">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block" for="entry-url">网站 URL</label>
+<div class="secure-input flex items-center bg-surface-container-low border border-border-hairline rounded-DEFAULT transition-all duration-200">
+<div class="pl-3 pr-2 text-on-surface-variant flex items-center">
+<span class="material-symbols-outlined text-[18px]">link</span>
+</div>
+<input class="flex-1 bg-transparent border-none py-2 px-2 font-code-md text-code-md text-on-background focus:ring-0 focus:outline-none placeholder:text-outline-variant font-code-md" id="entry-url" placeholder="https://..." type="url"/>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Username -->
+<div class="space-y-1.5">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block" for="entry-username">用户名 / 邮箱</label>
+<div class="secure-input flex items-center bg-surface-container-low border border-border-hairline rounded-DEFAULT transition-all duration-200">
+<div class="pl-3 pr-2 text-on-surface-variant flex items-center">
+<span class="material-symbols-outlined text-[18px]">person</span>
+</div>
+<input class="flex-1 bg-transparent border-none py-2 px-2 font-code-md text-code-md text-on-background focus:ring-0 focus:outline-none placeholder:text-outline-variant w-full font-code-md" id="entry-username" placeholder="user@example.com" type="text"/>
+<button class="pr-3 pl-2 text-on-surface-variant hover:text-primary transition-colors flex items-center" title="复制用户名" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Password -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block" for="entry-password">密码</label>
+<button class="text-primary font-body-sm text-body-sm hover:underline flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[14px]">autorenew</span> 生成
+                                </button>
+</div>
+<div class="secure-input flex items-center bg-surface-container-low border border-border-hairline rounded-DEFAULT transition-all duration-200">
+<div class="pl-3 pr-2 text-on-surface-variant flex items-center">
+<span class="material-symbols-outlined text-[18px]">key</span>
+</div>
+<input class="flex-1 bg-transparent border-none py-2 px-2 font-code-md text-code-md text-on-background focus:ring-0 focus:outline-none w-full font-code-md tracking-widest" id="entry-password" type="password" value="h*s8$kL9@mN2"/>
+<div class="flex items-center gap-1 pr-2">
+<button class="p-1 text-on-surface-variant hover:text-on-background transition-colors flex items-center" id="toggle-password" title="切换可见性" type="button">
+<span class="material-symbols-outlined text-[18px]" id="visibility-icon">visibility_off</span>
+</button>
+<button class="p-1 text-on-surface-variant hover:text-primary transition-colors flex items-center" title="复制密码" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Strength Meter -->
+<div class="pt-1">
+<div class="flex justify-between items-center mb-1">
+<span class="font-body-sm text-[10px] text-on-surface-variant">强度：<span class="text-secondary-fixed">强</span></span>
+</div>
+<div class="h-1 w-full bg-surface-container-high rounded-full overflow-hidden flex gap-0.5">
+<div class="h-full bg-error w-1/4"></div>
+<div class="h-full bg-tertiary w-1/4"></div>
+<div class="h-full bg-secondary w-1/4"></div>
+<div class="h-full bg-surface-container-high w-1/4"></div> <!-- Empty segment -->
+</div>
+</div>
+</div>
+</div>
+<!-- Tags -->
+<div class="space-y-1.5 pt-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">标签</label>
+<div class="secure-input flex items-center flex-wrap bg-surface-container-low border border-border-hairline rounded-DEFAULT p-1.5 transition-all duration-200 min-h-[40px] gap-2">
+<div class="pl-1.5 pr-1 text-on-surface-variant flex items-center">
+<span class="material-symbols-outlined text-[18px]">sell</span>
+</div>
+<!-- Existing Tags -->
+<div class="bg-surface-variant border border-border-hairline text-on-background font-body-sm text-body-sm px-2 py-0.5 rounded-sm flex items-center gap-1">
+                                Work
+                                <button class="hover:text-error transition-colors flex items-center" type="button">
+<span class="material-symbols-outlined text-[14px]">close</span>
+</button>
+</div>
+<div class="bg-surface-variant border border-border-hairline text-on-background font-body-sm text-body-sm px-2 py-0.5 rounded-sm flex items-center gap-1">
+                                Important
+                                <button class="hover:text-error transition-colors flex items-center" type="button">
+<span class="material-symbols-outlined text-[14px]">close</span>
+</button>
+</div>
+<!-- Tag Input -->
+<input class="flex-1 min-w-[100px] bg-transparent border-none py-0.5 px-1 font-body-md text-on-background focus:ring-0 focus:outline-none placeholder:text-outline-variant text-sm" placeholder="添加标签..." type="text"/>
+</div>
+</div>
+<!-- 安全笔记 -->
+<div class="space-y-1.5 pt-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block flex justify-between" for="entry-notes">
+                            安全笔记
+                            <span class="material-symbols-outlined text-[14px] text-outline-variant" title="笔记已加密">lock</span>
+</label>
+<div class="secure-input bg-surface-container-low border border-border-hairline rounded-DEFAULT transition-all duration-200">
+<textarea class="w-full bg-transparent border-none py-2 px-3 font-body-md text-on-background focus:ring-0 focus:outline-none placeholder:text-outline-variant resize-none custom-scrollbar" id="entry-notes" placeholder="在此输入加密笔记..." rows="3"></textarea>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="px-6 py-4 border-t border-border-hairline bg-surface-container-low shrink-0 flex items-center justify-end gap-3">
+<button class="px-4 py-2 rounded-DEFAULT font-body-md font-semibold text-on-surface-variant border border-border-hairline hover:bg-surface-variant hover:text-on-background transition-colors" type="button">
+                    取消
+                </button>
+<button class="px-4 py-2 rounded-DEFAULT font-body-md font-semibold bg-primary-container text-background border border-primary-container hover:bg-primary-fixed hover:border-primary-fixed transition-colors flex items-center gap-2" type="button">
+<span class="material-symbols-outlined text-[18px]">save</span>
+                    保存条目
+                </button>
+</div>
+</div>
+</div>
+<script>
+        // Simple password toggle logic
+        const toggleBtn = document.getElementById('toggle-password');
+        const passInput = document.getElementById('entry-password');
+        const visIcon = document.getElementById('visibility-icon');
+
+        toggleBtn.addEventListener('click', () => {
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                visIcon.textContent = 'visibility';
+            } else {
+                passInput.type = 'password';
+                visIcon.textContent = 'visibility_off';
+            }
+        });
+    </script>
+</body></html>

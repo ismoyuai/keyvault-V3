@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { auth, setSessionToken } from '@/bridge/tauri'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 onMounted(async () => {
   try {
-    const initialized = await auth.isInitialized()
-    if (!initialized) {
+    await authStore.checkInitialized()
+    if (!authStore.isInitialized) {
       router.push('/setup')
     } else {
       router.push('/login')

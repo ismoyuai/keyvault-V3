@@ -4,6 +4,8 @@
   "version": "3.0.0",
   "identifier": "com.keyvault.app",
   "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
   },

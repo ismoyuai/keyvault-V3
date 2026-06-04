@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<!-- CANONICAL: 首次设置 Step 1/2（仅主密码）。Step 2 见 setup_2/ 或 PROTOTYPE-PROMPTS P0-2 -->
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeyVault Setup</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#83fc89",
+                        "inverse-primary": "#0060aa",
+                        "on-primary-fixed": "#001c38",
+                        "tertiary": "#ffba42",
+                        "surface": "#0b141c",
+                        "secondary-fixed-dim": "#67df70",
+                        "outline-variant": "#414752",
+                        "inverse-on-surface": "#29313a",
+                        "surface-container-low": "#141c24",
+                        "surface-container-high": "#222b33",
+                        "surface-container": "#182028",
+                        "secondary": "#67df70",
+                        "on-error-container": "#ffdad6",
+                        "surface-tint": "#a2c9ff",
+                        "surface-dim": "#0b141c",
+                        "primary-fixed-dim": "#a2c9ff",
+                        "tertiary-container": "#da9600",
+                        "on-surface-variant": "#c0c7d4",
+                        "surface-container-highest": "#2d363e",
+                        "primary-fixed": "#d3e4ff",
+                        "on-tertiary-fixed-variant": "#614000",
+                        "on-primary": "#00315c",
+                        "surface-variant": "#2d363e",
+                        "outline": "#8b919d",
+                        "background": "#0b141c",
+                        "error-container": "#93000a",
+                        "tertiary-fixed-dim": "#ffba42",
+                        "secondary-container": "#27a640",
+                        "primary-container": "#58a6ff",
+                        "primary": "#a2c9ff",
+                        "on-secondary-fixed": "#002105",
+                        "surface-bright": "#313a43",
+                        "surface-container-lowest": "#060f16",
+                        "on-surface": "#dae3ee",
+                        "inverse-surface": "#dae3ee",
+                        "on-background": "#dae3ee",
+                        "on-secondary": "#00390d",
+                        "on-tertiary-container": "#4f3400",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed-variant": "#004882",
+                        "on-error": "#690005",
+                        "on-secondary-fixed-variant": "#005317",
+                        "on-primary-container": "#003a6b",
+                        "on-tertiary": "#432c00",
+                        "tertiary-fixed": "#ffddaf",
+                        "on-tertiary-fixed": "#281800",
+                        "on-secondary-container": "#00320a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "xs": "4px",
+                        "detail-panel-width": "400px",
+                        "sidebar-width": "260px",
+                        "md": "16px",
+                        "xl": "40px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["Inter"],
+                        "code-md": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "code-md": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-code-md { font-family: 'JetBrains Mono', monospace; }
+        /* Custom scrollbar for webkit to match the technical vibe */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0b141c; }
+        ::-webkit-scrollbar-thumb { background: #2d363e; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #414752; }
+    </style>
+</head>
+<body class="bg-background text-on-background h-screen w-screen flex flex-col overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="bg-background dark:bg-background text-primary dark:text-primary docked full-width top-0 h-10 border-b border-outline-variant flat no shadows transition-colors duration-200 flex justify-between items-center px-4 w-full select-none" style="-webkit-app-region: drag;">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">key</span>
+<span class="font-headline-md text-headline-md font-bold text-primary">KeyVault</span>
+</div>
+<!-- Window Controls -->
+<div class="flex items-center space-x-0" style="-webkit-app-region: no-drag;">
+<button class="h-10 w-10 flex items-center justify-center hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[16px]">remove</span>
+</button>
+<button class="h-10 w-10 flex items-center justify-center hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[16px]">fullscreen</span>
+</button>
+<button class="h-10 w-10 flex items-center justify-center hover:bg-error hover:text-on-error transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex items-center justify-center p-lg relative overflow-hidden">
+<!-- Abstract subtle background pattern for depth -->
+<div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: radial-gradient(circle at 2px 2px, #c0c7d4 1px, transparent 0); background-size: 24px 24px;"></div>
+<!-- Setup Wizard Card -->
+<div class="w-full max-w-lg bg-surface-container-low border border-outline-variant rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative z-10 flex flex-col p-xl">
+<!-- Header -->
+<div class="text-center mb-xl">
+<div class="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-surface-container-highest border border-outline-variant mb-4">
+<span class="material-symbols-outlined text-primary text-[24px]">vpn_key</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-xs">欢迎使用 KeyVault</h1>
+<h2 class="font-headline-md text-headline-md text-on-surface-variant">设置您的主密码</h2>
+</div>
+<!-- Explanatory Text -->
+<div class="bg-surface-container p-md rounded-lg border border-outline-variant mb-lg flex gap-3 items-start">
+<span class="material-symbols-outlined text-tertiary text-[20px] shrink-0 mt-0.5">warning</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                    主密码是保护您所有数据的唯一钥匙，请务必牢记。我们无法为您重置或找回主密码。
+                </p>
+</div>
+<!-- Form -->
+<form class="space-y-lg">
+<!-- Master Password -->
+<div class="space-y-sm relative">
+<label class="block font-label-caps text-label-caps text-on-surface" for="master-password">设置主密码</label>
+<div class="relative group">
+<input class="w-full bg-surface-container-highest border border-outline-variant rounded px-md py-2.5 font-code-md text-code-md text-on-surface focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-all" id="master-password" placeholder="••••••••••••••••" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility_off</span>
+</button>
+</div>
+<!-- Strength Meter -->
+<div class="pt-sm space-y-1">
+<div class="flex gap-1 h-1.5 w-full">
+<div class="flex-1 bg-surface-variant rounded-l"></div>
+<div class="flex-1 bg-surface-variant"></div>
+<div class="flex-1 bg-surface-variant"></div>
+<div class="flex-1 bg-surface-variant rounded-r"></div>
+</div>
+<div class="flex justify-between items-center px-1">
+<span class="font-label-caps text-[10px] text-on-surface-variant tracking-widest">强度</span>
+<span class="font-label-caps text-[10px] text-on-surface-variant">--</span>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="pt-lg">
+<button class="w-full bg-primary-container text-background font-headline-md text-headline-md py-3 rounded hover:bg-primary transition-colors flex justify-center items-center gap-2" type="button">
+<span>继续</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</form>
+<!-- Footer subtle indicator -->
+<div class="mt-xl text-center">
+<span class="font-label-caps text-[10px] text-outline-variant tracking-widest">STEP 1 OF 2</span>
+</div>
+</div>
+</main>
+<script>
+        // Simple micro-interaction for password visibility
+        document.querySelectorAll('button[type="button"]').forEach(btn => {
+            const icon = btn.querySelector('.material-symbols-outlined');
+            if(icon && (icon.textContent === 'visibility_off' || icon.textContent === 'visibility')) {
+                btn.addEventListener('click', (e) => {
+                    const input = e.currentTarget.previousElementSibling;
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.textContent = 'visibility';
+                    } else {
+                        input.type = 'password';
+                        icon.textContent = 'visibility_off';
+                    }
+                });
+            }
+        });
+
+        // Basic strength meter logic for UI demonstration
+        const masterInput = document.getElementById('master-password');
+        const segments = masterInput.parentElement.nextElementSibling.querySelectorAll('.flex-1');
+        const statusText = masterInput.parentElement.nextElementSibling.querySelector('span:last-child');
+
+        masterInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            segments.forEach(s => { s.className = 'flex-1 bg-surface-variant'; s.classList.remove('rounded-l', 'rounded-r'); });
+            segments[0].classList.add('rounded-l');
+            segments[3].classList.add('rounded-r');
+            
+            if (val.length === 0) {
+                statusText.textContent = '--';
+                statusText.className = 'font-label-caps text-[10px] text-on-surface-variant';
+            } else if (val.length < 6) {
+                segments[0].classList.replace('bg-surface-variant', 'bg-error');
+                statusText.textContent = 'WEAK';
+                statusText.className = 'font-label-caps text-[10px] text-error';
+            } else if (val.length < 10) {
+                segments[0].classList.replace('bg-surface-variant', 'bg-tertiary-container');
+                segments[1].classList.replace('bg-surface-variant', 'bg-tertiary-container');
+                statusText.textContent = 'FAIR';
+                statusText.className = 'font-label-caps text-[10px] text-tertiary-container';
+            } else if (val.length < 14) {
+                segments[0].classList.replace('bg-surface-variant', 'bg-tertiary');
+                segments[1].classList.replace('bg-surface-variant', 'bg-tertiary');
+                segments[2].classList.replace('bg-surface-variant', 'bg-tertiary');
+                statusText.textContent = 'GOOD';
+                statusText.className = 'font-label-caps text-[10px] text-tertiary';
+            } else {
+                segments[0].classList.replace('bg-surface-variant', 'bg-[#3FB950]');
+                segments[1].classList.replace('bg-surface-variant', 'bg-[#3FB950]');
+                segments[2].classList.replace('bg-surface-variant', 'bg-[#3FB950]');
+                segments[3].classList.replace('bg-surface-variant', 'bg-[#3FB950]');
+                statusText.textContent = 'STRONG';
+                statusText.className = 'font-label-caps text-[10px] text-[#3FB950]';
+            }
+        });
+    </script>
+</body></html>

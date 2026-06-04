@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<!-- CANONICAL: 主界面 API Key 三栏。见 UNIFIED-SPEC.md §2.5 变体 A -->
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeyVault - API 密钥详情</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-fixed-dim": "#ffba42",
+                      "surface-container": "#182028",
+                      "primary": "#a2c9ff",
+                      "tertiary": "#ffba42",
+                      "surface": "#0b141c",
+                      "outline": "#8b919d",
+                      "error": "#ffb4ab",
+                      "on-primary-container": "#003a6b",
+                      "surface-container-low": "#141c24",
+                      "inverse-primary": "#0060aa",
+                      "outline-variant": "#414752",
+                      "on-secondary-container": "#00320a",
+                      "on-background": "#dae3ee",
+                      "error-container": "#93000a",
+                      "surface-container-high": "#222b33",
+                      "on-error": "#690005",
+                      "background": "#0b141c",
+                      "on-primary-fixed": "#001c38",
+                      "on-tertiary-fixed-variant": "#614000",
+                      "secondary": "#67df70",
+                      "surface-variant": "#2d363e",
+                      "surface-container-lowest": "#060f16",
+                      "primary-fixed": "#d3e4ff",
+                      "secondary-fixed": "#83fc89",
+                      "on-tertiary-fixed": "#281800",
+                      "surface-tint": "#a2c9ff",
+                      "primary-container": "#58a6ff",
+                      "on-error-container": "#ffdad6",
+                      "on-tertiary": "#432c00",
+                      "on-tertiary-container": "#4f3400",
+                      "inverse-surface": "#dae3ee",
+                      "inverse-on-surface": "#29313a",
+                      "surface-container-highest": "#2d363e",
+                      "on-secondary-fixed-variant": "#005317",
+                      "on-primary": "#00315c",
+                      "secondary-container": "#27a640",
+                      "on-surface-variant": "#c0c7d4",
+                      "primary-fixed-dim": "#a2c9ff",
+                      "tertiary-container": "#da9600",
+                      "secondary-fixed-dim": "#67df70",
+                      "surface-bright": "#313a43",
+                      "on-surface": "#dae3ee",
+                      "surface-dim": "#0b141c",
+                      "tertiary-fixed": "#ffddaf",
+                      "on-secondary": "#00390d",
+                      "on-secondary-fixed": "#002105",
+                      "on-primary-fixed-variant": "#004882"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xl": "40px",
+                      "sidebar-width": "260px",
+                      "md": "16px",
+                      "lg": "24px",
+                      "sm": "8px",
+                      "base": "4px",
+                      "xs": "4px",
+                      "detail-panel-width": "400px"
+              },
+              "fontFamily": {
+                      "body-sm": ["Inter"],
+                      "body-md": ["Inter"],
+                      "code-md": ["JetBrains Mono"],
+                      "label-caps": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "headline-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                      "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                      "code-md": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                      "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                      "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                      "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 20px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Custom scrollbar for technical feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.outline-variant'); 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.outline'); 
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface h-screen w-screen overflow-hidden flex flex-col font-body-md select-none">
+<!-- TopAppBar -->
+<header class="bg-background border-b border-outline-variant flex justify-between items-center px-4 w-full full-width top-0 h-10 shrink-0 select-none drag-region">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">key</span>
+<h1 class="font-headline-md text-headline-md font-bold text-primary tracking-tight">KeyVault</h1>
+</div>
+<!-- Window Controls Placeholder -->
+<div class="flex items-center gap-sm no-drag">
+<button aria-label="Minimize" class="w-6 h-6 flex items-center justify-center rounded hover:bg-surface-variant transition-colors duration-200 text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[16px]">remove</span>
+</button>
+<button aria-label="Maximize" class="w-6 h-6 flex items-center justify-center rounded hover:bg-surface-variant transition-colors duration-200 text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[16px]">fullscreen</span>
+</button>
+<button aria-label="Close" class="w-6 h-6 flex items-center justify-center rounded hover:bg-error-container transition-colors duration-200 text-on-surface-variant hover:text-on-error">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+</header>
+<!-- Main Workspace -->
+<main class="flex flex-1 h-[calc(100vh-40px)] overflow-hidden">
+<!-- SideNavBar (Fixed 260px) -->
+<nav class="bg-surface-container-low border-r border-outline-variant w-sidebar-width shrink-0 flex flex-col h-full py-md">
+<!-- Header -->
+<div class="px-md mb-lg flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-surface-variant border border-outline-variant flex items-center justify-center overflow-hidden shrink-0">
+<span class="material-symbols-outlined text-outline">person</span>
+</div>
+<div class="flex flex-col overflow-hidden">
+<span class="font-headline-md text-[14px] font-bold text-on-surface truncate">KeyVault Pro</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Local Vault</span>
+</div>
+</div>
+<!-- CTA -->
+<div class="px-md mb-md">
+<button class="w-full bg-primary-container text-on-primary-container font-body-md text-body-md font-bold py-2 rounded flex items-center justify-center gap-2 hover:opacity-90 transition-opacity border border-transparent">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    新建条目
+                </button>
+</div>
+<!-- Tabs -->
+<div class="flex flex-col flex-1 overflow-y-auto gap-xs px-sm">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-primary">inventory_2</span>
+                    全部条目
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-tertiary">star</span>
+                    收藏
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out group" href="#">
+<span class="material-symbols-outlined text-[18px]">key</span>
+                    密码
+                </a>
+<!-- Active Tab -->
+<a class="flex items-center gap-3 px-3 py-2 rounded bg-surface-variant text-primary font-bold border-l-2 border-primary transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[18px]">code</span>
+                    API 密钥
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out group" href="#">
+<span class="material-symbols-outlined text-[18px]">description</span>
+                    安全笔记
+                </a>
+<div class="my-2 border-t border-outline-variant mx-2"></div>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out group" href="#">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+                    回收站
+                </a>
+</div>
+<!-- Footer Tabs -->
+<div class="mt-auto px-sm flex flex-col gap-xs pt-md border-t border-outline-variant">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+                    设置
+                </a>
+<button class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out w-full text-left">
+<span class="material-symbols-outlined text-[18px]">lock</span>
+                    锁定
+                </button>
+</div>
+</nav>
+<!-- List View (Fluid Center) -->
+<section class="flex-1 flex flex-col min-w-0 border-r border-outline-variant bg-surface">
+<!-- List Header -->
+<div class="px-md py-3 border-b border-outline-variant flex flex-col gap-sm shrink-0 bg-surface-container-lowest">
+<h2 class="font-headline-md text-headline-md font-semibold text-on-surface">API 密钥</h2>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px]">search</span>
+<input class="w-full bg-surface border border-outline-variant rounded pl-8 pr-3 py-1.5 text-body-md font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder-on-surface-variant" placeholder="搜索密钥..." type="text"/>
+</div>
+</div>
+<!-- List Content -->
+<div class="flex-1 overflow-y-auto">
+<ul class="flex flex-col">
+<!-- Active List Item -->
+<li class="px-md py-3 border-b border-outline-variant bg-surface-variant cursor-pointer relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-[2px] bg-primary"></div>
+<div class="flex items-center justify-between gap-3">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-8 h-8 rounded bg-surface border border-outline-variant flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-[18px]">code</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-body-md text-body-md font-semibold text-on-surface truncate">OpenAI API Key - Production</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">org-vault-7721</span>
+</div>
+</div>
+<span class="font-label-caps text-[10px] bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded uppercase tracking-wider shrink-0">Prod</span>
+</div>
+</li>
+<!-- Inactive List Items -->
+<li class="px-md py-3 border-b border-outline-variant hover:bg-surface-variant/50 cursor-pointer transition-colors group">
+<div class="flex items-center justify-between gap-3">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-8 h-8 rounded bg-surface border border-outline-variant flex items-center justify-center shrink-0 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">code</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-body-md text-body-md text-on-surface truncate">AWS IAM Access Key</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Deployments</span>
+</div>
+</div>
+</div>
+</li>
+<li class="px-md py-3 border-b border-outline-variant hover:bg-surface-variant/50 cursor-pointer transition-colors group">
+<div class="flex items-center justify-between gap-3">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-8 h-8 rounded bg-surface border border-outline-variant flex items-center justify-center shrink-0 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">code</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-body-md text-body-md text-on-surface truncate">Stripe Secret Key</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Billing Service</span>
+</div>
+</div>
+<span class="font-label-caps text-[10px] bg-surface-bright border border-outline-variant text-on-surface-variant px-2 py-0.5 rounded uppercase tracking-wider shrink-0">Test</span>
+</div>
+</li>
+</ul>
+</div>
+</section>
+<!-- Detail Panel (Fixed 400px) -->
+<aside class="w-detail-panel-width shrink-0 flex flex-col bg-surface-container-low overflow-y-auto">
+<!-- Detail Header -->
+<div class="p-lg pb-md border-b border-outline-variant flex flex-col gap-4 sticky top-0 bg-surface-container-low z-10 backdrop-blur-md bg-opacity-95">
+<div class="flex items-start justify-between gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface border border-outline-variant shadow-sm flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-[28px]" data-weight="fill">code</span>
+</div>
+<div class="flex gap-2 shrink-0">
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors" title="Edit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors" title="Favorite">
+<span class="material-symbols-outlined text-[18px]">star</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:text-error hover:border-error/50 hover:bg-error-container/20 transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface break-words leading-tight">OpenAI API Key - Production</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Last synced: 2 hours ago</p>
+</div>
+<div class="flex gap-2 mt-1">
+<span class="inline-flex items-center gap-1 font-label-caps text-label-caps bg-secondary-container/20 text-secondary border border-secondary/30 px-2.5 py-1 rounded">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary block"></span>
+                        Production
+                    </span>
+</div>
+</div>
+<!-- Detail Content Form -->
+<div class="p-lg flex flex-col gap-6">
+<!-- API Key Field (Secure Input) -->
+<div class="flex flex-col gap-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">API Key</label>
+<div class="relative group flex bg-surface border border-outline-variant rounded focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/50 transition-all overflow-hidden shadow-sm">
+<div class="flex-1 relative">
+<!-- Visually Masked Field -->
+<input class="w-full bg-transparent border-none py-2.5 pl-3 pr-10 font-code-md text-code-md text-on-surface focus:ring-0 cursor-text select-all" readonly="" style="-webkit-text-security: disc;" type="password" value="sk-proj-xyz123abc456def789"/>
+<!-- Fallback masked text for strictly visual display if preferred over input type=password: -->
+<!-- <div class="absolute inset-0 py-2.5 px-3 font-code-md text-code-md text-on-surface flex items-center tracking-widest pointer-events-none">sk-••••••••••••••••••••••••</div> -->
+</div>
+<div class="flex shrink-0 bg-surface border-l border-outline-variant">
+<button class="w-10 h-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant transition-colors" title="Toggle Visibility">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="w-10 h-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant transition-colors border-l border-outline-variant" title="Copy to clipboard">
+<span class="material-symbols-outlined text-[18px]">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Organization ID -->
+<div class="flex flex-col gap-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Organization ID</label>
+<div class="relative flex bg-surface border border-outline-variant rounded overflow-hidden">
+<input class="w-full bg-transparent border-none py-2 px-3 font-code-md text-code-md text-on-surface focus:ring-0 cursor-text select-all text-sm" readonly="" type="text" value="org-vault-7721"/>
+<button class="w-9 h-full shrink-0 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors border-l border-outline-variant" title="Copy">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Dates Grid -->
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-1.5">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Created Date</label>
+<div class="font-code-md text-[13px] text-on-surface bg-surface border border-outline-variant rounded px-3 py-2">
+                            2023-10-15
+                        </div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Expires Date</label>
+<div class="font-code-md text-[13px] text-on-surface bg-surface border border-outline-variant rounded px-3 py-2 flex items-center gap-2">
+                            2024-10-15
+                            <span class="material-symbols-outlined text-tertiary text-[14px]" title="Expiring soon">warning</span>
+</div>
+</div>
+</div>
+<!-- Custom Tags -->
+<div class="flex flex-col gap-2 border-t border-outline-variant pt-4 mt-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]">sell</span>
+                        Tags
+                    </label>
+<div class="flex flex-wrap gap-2">
+<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-surface-variant border border-outline-variant text-on-surface font-body-sm text-body-sm cursor-pointer hover:bg-surface-bright transition-colors">
+                            Work
+                        </span>
+<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-surface-variant border border-outline-variant text-on-surface font-body-sm text-body-sm cursor-pointer hover:bg-surface-bright transition-colors">
+                            AI
+                        </span>
+<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-surface-variant border border-outline-variant text-on-surface font-body-sm text-body-sm cursor-pointer hover:bg-surface-bright transition-colors">
+                            Billing
+                        </span>
+<button class="inline-flex items-center justify-center w-7 h-[26px] rounded-md border border-dashed border-outline-variant text-on-surface-variant hover:text-on-surface hover:border-outline transition-colors">
+<span class="material-symbols-outlined text-[14px]">add</span>
+</button>
+</div>
+</div>
+</div>
+</aside>
+</main>
+</body></html>

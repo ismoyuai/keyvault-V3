@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<!-- FUTURE / ARCHIVED: 恢复密钥 Setup。v1 使用 2 步向导，见 _1 + setup_2。详见 _archive/README.md -->
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeyVault - Step 2</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#83fc89",
+                        "inverse-primary": "#0060aa",
+                        "on-primary-fixed": "#001c38",
+                        "tertiary": "#ffba42",
+                        "surface": "#0b141c",
+                        "secondary-fixed-dim": "#67df70",
+                        "outline-variant": "#414752",
+                        "inverse-on-surface": "#29313a",
+                        "surface-container-low": "#141c24",
+                        "surface-container-high": "#222b33",
+                        "surface-container": "#182028",
+                        "secondary": "#67df70",
+                        "on-error-container": "#ffdad6",
+                        "surface-tint": "#a2c9ff",
+                        "surface-dim": "#0b141c",
+                        "primary-fixed-dim": "#a2c9ff",
+                        "tertiary-container": "#da9600",
+                        "on-surface-variant": "#c0c7d4",
+                        "surface-container-highest": "#2d363e",
+                        "primary-fixed": "#d3e4ff",
+                        "on-tertiary-fixed-variant": "#614000",
+                        "on-primary": "#00315c",
+                        "surface-variant": "#2d363e",
+                        "outline": "#8b919d",
+                        "background": "#0b141c",
+                        "error-container": "#93000a",
+                        "tertiary-fixed-dim": "#ffba42",
+                        "secondary-container": "#27a640",
+                        "primary-container": "#58a6ff",
+                        "primary": "#a2c9ff",
+                        "on-secondary-fixed": "#002105",
+                        "surface-bright": "#313a43",
+                        "surface-container-lowest": "#060f16",
+                        "on-surface": "#dae3ee",
+                        "inverse-surface": "#dae3ee",
+                        "on-background": "#dae3ee",
+                        "on-secondary": "#00390d",
+                        "on-tertiary-container": "#4f3400",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed-variant": "#004882",
+                        "on-error": "#690005",
+                        "on-secondary-fixed-variant": "#005317",
+                        "on-primary-container": "#003a6b",
+                        "on-tertiary": "#432c00",
+                        "tertiary-fixed": "#ffddaf",
+                        "on-tertiary-fixed": "#281800",
+                        "on-secondary-container": "#00320a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "xs": "4px",
+                        "detail-panel-width": "400px",
+                        "sidebar-width": "260px",
+                        "md": "16px",
+                        "xl": "40px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["Inter"],
+                        "code-md": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "code-md": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        body {
+            background-color: #0D1117; /* Base level 0 from guidelines */
+        }
+        .wizard-card {
+            background-color: #161B22; /* Level 1 Surface */
+            border: 1px solid #30363D;
+        }
+        .input-glow:focus-within {
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.3);
+            border-color: #58A6FF;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface h-screen w-screen flex flex-col items-center justify-center overflow-hidden font-body-md text-body-md">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface text-primary dark:text-primary docked full-width top-0 border-b border-outline-variant dark:border-outline-variant flat no shadows flex justify-between items-center w-full px-md h-12 fixed z-50">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined fill text-[24px]">vpn_key</span>
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary">KeyVault</span>
+</div>
+<div class="flex items-center gap-sm">
+<button class="hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors cursor-pointer active:opacity-80 p-xs rounded">
+<span class="material-symbols-outlined text-[20px]">minimize</span>
+</button>
+<button class="hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors cursor-pointer active:opacity-80 p-xs rounded">
+<span class="material-symbols-outlined text-[20px]">maximize</span>
+</button>
+<button class="hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors cursor-pointer active:opacity-80 p-xs rounded">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+</header>
+<!-- SideNavBar & Main Content Wrapper -->
+<div class="flex w-full h-full pt-12">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-low dark:bg-surface-container-low text-primary dark:text-primary font-body-md text-body-md docked fixed left-0 top-12 h-full w-sidebar-width border-r border-outline-variant dark:border-outline-variant flat no shadows flex flex-col py-lg z-40 hidden md:flex">
+<div class="px-lg mb-xl">
+<h2 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary">KeyVault</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Setup Wizard</p>
+</div>
+<div class="flex flex-col gap-sm px-md">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-all duration-200 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">start</span>
+<span>Welcome</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-primary dark:text-primary font-bold border-r-2 border-primary bg-surface-container-highest transition-all duration-200 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined fill">security</span>
+<span>Security</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-all duration-200 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">database</span>
+<span>Storage</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-all duration-200 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">check_circle</span>
+<span>Finalize</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex items-center justify-center md:pl-sidebar-width w-full h-full p-lg bg-[#0D1117]">
+<div class="wizard-card w-full max-w-[600px] rounded-xl p-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col gap-lg">
+<!-- Progress Header -->
+<div class="flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-caps text-label-caps text-primary tracking-widest uppercase">STEP 2 OF 3</span>
+<div class="flex gap-1">
+<div class="h-1 w-8 bg-primary rounded-full"></div>
+<div class="h-1 w-8 bg-primary rounded-full"></div>
+<div class="h-1 w-8 bg-surface-variant rounded-full"></div>
+</div>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">主密码已就绪</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        您的密码库现已准备好进行加密。请记住，此密码是访问您数据的唯一凭据。我们无法帮您恢复。
+                    </p>
+</div>
+<!-- Recovery Key Section -->
+<div class="flex flex-col gap-md bg-surface-container p-md rounded-lg border border-outline-variant">
+<div class="flex items-center gap-sm text-tertiary">
+<span class="material-symbols-outlined text-[20px]">warning</span>
+<h3 class="font-headline-md text-headline-md">备份恢复密钥</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                        如果忘记主密码，这是恢复数据的唯一方法。请将其保存在安全的地方（如离线物理介质）。
+                    </p>
+<div class="bg-surface-container-lowest p-md rounded border border-outline-variant font-code-md text-code-md text-primary-fixed break-all select-all flex justify-between items-start gap-md">
+<span class="tracking-wider" id="recovery-key">KV-8A2F-9C4B-7E1D-5F0A-2B3C-6D9E-1A4F</span>
+<button class="text-on-surface-variant hover:text-primary transition-colors flex-shrink-0" onclick="copyKey()" title="复制">
+<span class="material-symbols-outlined text-[20px]">content_copy</span>
+</button>
+</div>
+<div class="flex gap-sm mt-sm">
+<button class="flex items-center justify-center gap-sm px-md py-sm rounded border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-body-md text-body-md w-full">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                            下载备份文件
+                        </button>
+<button class="flex items-center justify-center gap-sm px-md py-sm rounded border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-body-md text-body-md w-full">
+<span class="material-symbols-outlined text-[18px]">print</span>
+                            打印凭证
+                        </button>
+</div>
+</div>
+<!-- Confirmation Checkbox -->
+<label class="flex items-start gap-md cursor-pointer group mt-md">
+<div class="relative flex items-center justify-center mt-1">
+<input class="peer appearance-none w-5 h-5 border border-outline-variant rounded bg-surface-container-lowest checked:bg-primary checked:border-primary transition-all cursor-pointer" id="confirm-backup" onchange="toggleFinishButton()" type="checkbox"/>
+<span class="material-symbols-outlined absolute text-on-primary-container text-[16px] pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity font-bold">check</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors select-none">
+                        我已安全保存并备份了恢复密钥
+                    </span>
+</label>
+<!-- Actions -->
+<div class="flex justify-end gap-md pt-lg border-t border-outline-variant mt-sm">
+<button class="px-lg py-sm rounded font-body-md text-body-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-highest transition-colors">
+                        返回
+                    </button>
+<button class="px-lg py-sm rounded font-body-md text-body-md bg-surface-variant text-on-surface-variant cursor-not-allowed transition-all duration-300" disabled="" id="finish-btn">
+                        完成设置
+                    </button>
+</div>
+</div>
+</main>
+</div>
+<script>
+        function toggleFinishButton() {
+            const checkbox = document.getElementById('confirm-backup');
+            const btn = document.getElementById('finish-btn');
+            if (checkbox.checked) {
+                btn.disabled = false;
+                btn.className = "px-lg py-sm rounded font-body-md text-body-md bg-[#58A6FF] text-[#0D1117] hover:bg-primary-fixed transition-all duration-300 cursor-pointer font-semibold shadow-[0_0_10px_rgba(88,166,255,0.3)]";
+            } else {
+                btn.disabled = true;
+                btn.className = "px-lg py-sm rounded font-body-md text-body-md bg-surface-variant text-on-surface-variant cursor-not-allowed transition-all duration-300";
+            }
+        }
+
+        function copyKey() {
+            const keyText = document.getElementById('recovery-key').innerText;
+            navigator.clipboard.writeText(keyText).then(() => {
+                // Visual feedback could go here, keeping it simple for now
+                alert('已复制到剪贴板');
+            });
+        }
+    </script>
+</body></html>

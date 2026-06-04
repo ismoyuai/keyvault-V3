@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<!-- CANONICAL: 安全笔记三栏（窄列表 + 宽阅读区）。见 UNIFIED-SPEC.md §2.5 变体 B -->
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeyVault - 安全笔记详情</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed-dim": "#ffba42",
+                    "surface-container": "#182028",
+                    "primary": "#a2c9ff",
+                    "tertiary": "#ffba42",
+                    "surface": "#0b141c",
+                    "outline": "#8b919d",
+                    "error": "#ffb4ab",
+                    "on-primary-container": "#003a6b",
+                    "surface-container-low": "#141c24",
+                    "inverse-primary": "#0060aa",
+                    "outline-variant": "#414752",
+                    "on-secondary-container": "#00320a",
+                    "on-background": "#dae3ee",
+                    "error-container": "#93000a",
+                    "surface-container-high": "#222b33",
+                    "on-error": "#690005",
+                    "background": "#0b141c",
+                    "on-primary-fixed": "#001c38",
+                    "on-tertiary-fixed-variant": "#614000",
+                    "secondary": "#67df70",
+                    "surface-variant": "#2d363e",
+                    "surface-container-lowest": "#060f16",
+                    "primary-fixed": "#d3e4ff",
+                    "secondary-fixed": "#83fc89",
+                    "on-tertiary-fixed": "#281800",
+                    "surface-tint": "#a2c9ff",
+                    "primary-container": "#58a6ff",
+                    "on-error-container": "#ffdad6",
+                    "on-tertiary": "#432c00",
+                    "on-tertiary-container": "#4f3400",
+                    "inverse-surface": "#dae3ee",
+                    "inverse-on-surface": "#29313a",
+                    "surface-container-highest": "#2d363e",
+                    "on-secondary-fixed-variant": "#005317",
+                    "on-primary": "#00315c",
+                    "secondary-container": "#27a640",
+                    "on-surface-variant": "#c0c7d4",
+                    "primary-fixed-dim": "#a2c9ff",
+                    "tertiary-container": "#da9600",
+                    "secondary-fixed-dim": "#67df70",
+                    "surface-bright": "#313a43",
+                    "on-surface": "#dae3ee",
+                    "surface-dim": "#0b141c",
+                    "tertiary-fixed": "#ffddaf",
+                    "on-secondary": "#00390d",
+                    "on-secondary-fixed": "#002105",
+                    "on-primary-fixed-variant": "#004882"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xl": "40px",
+                    "sidebar-width": "260px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "sm": "8px",
+                    "base": "4px",
+                    "xs": "4px",
+                    "detail-panel-width": "400px"
+            },
+            "fontFamily": {
+                    "body-sm": [
+                            "Inter"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "code-md": [
+                            "JetBrains Mono"
+                    ],
+                    "label-caps": [
+                            "Inter"
+                    ],
+                    "headline-md": [
+                            "Inter"
+                    ],
+                    "headline-lg": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "body-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "code-md": [
+                            "13px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-caps": [
+                            "11px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-md": [
+                            "18px",
+                            {
+                                    "lineHeight": "24px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+        },
+        },
+      }
+    </script>
+<style>
+        /* Custom scrollbar for technical aesthetic */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: theme('colors.surface-container-lowest'); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.outline-variant'); 
+            border-radius: theme('borderRadius.DEFAULT');
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.outline'); 
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background h-screen flex flex-col overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="bg-background dark:bg-background text-primary dark:text-primary font-headline-md text-headline-md docked full-width top-0 h-10 border-b border-outline-variant flat no shadows flex justify-between items-center px-4 w-full shrink-0 z-50 select-none">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">shield_lock</span>
+<span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">KeyVault</span>
+</div>
+<div class="flex items-center gap-sm">
+<button class="w-6 h-6 flex items-center justify-center hover:bg-surface-variant text-on-surface-variant transition-colors duration-200 rounded">
+<span class="material-symbols-outlined text-[16px]">remove</span>
+</button>
+<button class="w-6 h-6 flex items-center justify-center hover:bg-surface-variant text-on-surface-variant transition-colors duration-200 rounded">
+<span class="material-symbols-outlined text-[16px]">fullscreen</span>
+</button>
+<button class="w-6 h-6 flex items-center justify-center hover:bg-error-container hover:text-on-error-container text-on-surface-variant transition-colors duration-200 rounded">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+</header>
+<!-- Main Workspace -->
+<main class="flex flex-1 overflow-hidden">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-low dark:bg-surface-container-low text-primary dark:text-primary font-body-md text-body-md docked h-full w-[260px] border-r border-outline-variant flat no shadows flex flex-col h-full py-md w-sidebar-width shrink-0 z-40 select-none">
+<!-- Header -->
+<div class="px-md mb-lg flex items-center gap-md">
+<div class="w-10 h-10 rounded bg-surface-variant border border-outline-variant flex items-center justify-center overflow-hidden shrink-0">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 1;">person</span>
+</div>
+<div class="flex flex-col overflow-hidden">
+<span class="font-headline-md text-[16px] leading-[20px] font-bold text-primary truncate">KeyVault Pro</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Local Vault</span>
+</div>
+</div>
+<!-- CTA -->
+<div class="px-md mb-lg">
+<button class="w-full bg-primary-container text-[#0D1117] font-body-md text-body-md font-semibold py-sm px-md rounded flex items-center justify-center gap-sm hover:bg-primary transition-colors duration-150 ease-in-out">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    新建条目
+                </button>
+</div>
+<!-- Tabs Navigation -->
+<div class="flex-1 overflow-y-auto px-sm flex flex-col gap-base">
+<a class="flex items-center gap-md px-sm py-sm rounded hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out text-on-surface-variant font-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">inventory_2</span>
+<span>全部条目</span>
+</a>
+<a class="flex items-center gap-md px-sm py-sm rounded hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out text-on-surface-variant font-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">star</span>
+<span>收藏</span>
+</a>
+<a class="flex items-center gap-md px-sm py-sm rounded hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out text-on-surface-variant font-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">key</span>
+<span>密码</span>
+</a>
+<a class="flex items-center gap-md px-sm py-sm rounded hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out text-on-surface-variant font-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">code</span>
+<span>API 密钥</span>
+</a>
+<!-- Active Tab -->
+<a class="flex items-center gap-md px-sm py-sm rounded bg-surface-container text-primary font-bold border-l-2 border-primary transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">description</span>
+<span>安全笔记</span>
+</a>
+<a class="flex items-center gap-md px-sm py-sm rounded hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out text-on-surface-variant font-body-md mt-auto" href="#">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+<span>回收站</span>
+</a>
+</div>
+<!-- Footer Navigation -->
+<div class="mt-auto px-sm pt-md border-t border-outline-variant/50 flex flex-col gap-base">
+<a class="flex items-center gap-md px-sm py-sm rounded hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out text-on-surface-variant font-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>设置</span>
+</a>
+<a class="flex items-center gap-md px-sm py-sm rounded hover:bg-surface-variant hover:text-on-surface transition-all duration-150 ease-in-out text-on-surface-variant font-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+<span>锁定</span>
+</a>
+</div>
+</nav>
+<!-- Column 2: List View (Fluid for middle) -->
+<section class="w-[320px] bg-surface-container-lowest border-r border-outline-variant flex flex-col shrink-0">
+<!-- List Header / Filter -->
+<div class="p-md border-b border-outline-variant flex flex-col gap-md bg-surface-container-low/50 sticky top-0 z-10">
+<h2 class="font-headline-md text-headline-md text-on-surface">安全笔记</h2>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+<input class="w-full bg-surface-container border border-outline-variant text-on-surface font-body-sm text-body-sm rounded pl-[32px] pr-sm py-[6px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline" placeholder="搜索笔记..." type="text"/>
+</div>
+</div>
+<!-- List Items -->
+<div class="flex-1 overflow-y-auto">
+<!-- Active List Item -->
+<button class="w-full text-left p-md border-b border-outline-variant/50 bg-surface-variant/40 flex flex-col gap-xs hover:bg-surface-variant/60 transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md font-semibold text-primary truncate">Server Recovery...</span>
+<span class="material-symbols-outlined text-primary text-[16px]">lock</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Category: Infrastructure</span>
+<span class="font-body-sm text-[10px] text-outline mt-1">Today, 10:42 AM</span>
+</button>
+<!-- Inactive List Items -->
+<button class="w-full text-left p-md border-b border-outline-variant/50 flex flex-col gap-xs hover:bg-surface-variant/30 transition-colors group">
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md text-on-surface truncate group-hover:text-primary transition-colors">Database Root Keys</span>
+<span class="material-symbols-outlined text-outline text-[16px]">lock</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Category: Credentials</span>
+<span class="font-body-sm text-[10px] text-outline mt-1">Yesterday</span>
+</button>
+<button class="w-full text-left p-md border-b border-outline-variant/50 flex flex-col gap-xs hover:bg-surface-variant/30 transition-colors group">
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md text-on-surface truncate group-hover:text-primary transition-colors">Office Network Config</span>
+<span class="material-symbols-outlined text-outline text-[16px]">lock</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Category: Network</span>
+<span class="font-body-sm text-[10px] text-outline mt-1">Oct 12, 2023</span>
+</button>
+</div>
+</section>
+<!-- Column 3: Detail Panel (Focus area) -->
+<section class="flex-1 bg-surface-container flex flex-col min-w-0">
+<!-- Detail Header -->
+<header class="p-lg border-b border-outline-variant flex flex-col gap-md bg-surface-container shrink-0 z-20">
+<div class="flex justify-between items-start">
+<div class="flex flex-col gap-xs min-w-0 pr-md">
+<h1 class="font-headline-lg text-headline-lg text-on-surface font-semibold truncate">Server Recovery Procedures</h1>
+<span class="font-body-md text-body-md text-on-surface-variant">Category: Infrastructure</span>
+</div>
+<div class="flex items-center gap-sm shrink-0">
+<button class="p-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded border border-transparent transition-all" title="Share Note">
+<span class="material-symbols-outlined text-[20px]">share</span>
+</button>
+<button class="p-sm text-on-surface-variant hover:text-primary hover:bg-surface-variant rounded border border-transparent transition-all" title="Edit Note">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-sm text-on-surface-variant hover:text-error hover:bg-error-container/20 rounded border border-transparent transition-all" title="Delete Note">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Metadata Row -->
+<div class="flex items-center flex-wrap gap-md mt-sm pt-md border-t border-outline-variant/30">
+<div class="flex items-center gap-xs text-outline font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span>Edited: Today, 10:42 AM</span>
+</div>
+<div class="flex items-center gap-xs text-outline font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px]">sd_card</span>
+<span>Size: 4.2 KB</span>
+</div>
+<div class="flex items-center gap-sm ml-auto">
+<!-- Tags -->
+<span class="px-2 py-0.5 rounded bg-error-container/20 text-error border border-error/30 font-label-caps text-label-caps uppercase flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span> Urgent
+                        </span>
+<span class="px-2 py-0.5 rounded bg-surface-variant border border-outline-variant text-on-surface-variant font-label-caps text-label-caps uppercase">System</span>
+</div>
+</div>
+</header>
+<!-- Detail Content (The Secure Note) -->
+<div class="flex-1 overflow-y-auto bg-background relative p-lg md:p-[40px] flex justify-center">
+<!-- Background Lock Watermark for highly secure feel -->
+<div class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.02] overflow-hidden">
+<span class="material-symbols-outlined text-[400px] text-primary" style="font-variation-settings: 'FILL' 1;">shield_lock</span>
+</div>
+<!-- Document Canvas -->
+<div class="w-full max-w-[800px] relative">
+<!-- Floating Security Indicator -->
+<div class="absolute -left-[40px] top-0 hidden md:flex flex-col items-center gap-sm text-primary opacity-50 hover:opacity-100 transition-opacity cursor-help" title="End-to-End Encrypted Note">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">lock</span>
+<div class="w-[1px] h-32 bg-gradient-to-b from-primary to-transparent"></div>
+</div>
+<!-- Markdown Content Container -->
+<article class="font-body-md text-body-md text-on-surface leading-relaxed space-y-lg pb-xl">
+<p class="text-on-surface-variant text-[16px] leading-[24px]">
+                            This document contains critical procedures for bare-metal recovery of the primary production database clusters. These steps must only be executed by Level 3 infrastructure engineers during a verified Sev-1 incident.
+                        </p>
+<div class="space-y-md">
+<h3 class="font-headline-md text-headline-md text-primary font-semibold flex items-center gap-sm border-b border-outline-variant/50 pb-sm mt-lg">
+<span class="text-outline-variant text-body-sm font-mono">01</span> Phase 1: Initial Assessment
+                            </h3>
+<p>
+                                Step 1: Access the master node via the out-of-band management console (iLO/iDRAC). Do not attempt SSH if the primary network interface is unresponsive.
+                            </p>
+<p>
+                                Step 2: Verify the integrity of the encrypted storage volumes before attempting to mount. Run the pre-flight checksum script located in the secure bastion environment.
+                            </p>
+<!-- Monospace block for technical commands -->
+<div class="bg-surface-container-highest border border-outline-variant rounded p-md mt-sm font-code-md text-code-md text-primary-fixed-dim overflow-x-auto relative group">
+<button class="absolute top-sm right-sm text-outline hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity bg-surface-container p-1 rounded" title="Copy code">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+<code>$ ssh -i ~/.ssh/recovery_ed25519 admin@bastion-01.internal</code><br/>
+<code>$ sudo /opt/recovery/verify_luks_headers.sh /dev/nvme1n1</code>
+</div>
+</div>
+<div class="space-y-md">
+<h3 class="font-headline-md text-headline-md text-primary font-semibold flex items-center gap-sm border-b border-outline-variant/50 pb-sm mt-lg">
+<span class="text-outline-variant text-body-sm font-mono">02</span> Phase 2: Decryption &amp; Mounting
+                            </h3>
+<p>
+                                Step 3: Decrypt volume using the vault-injected ephemeral token. The token is valid for 15 minutes post-generation.
+                            </p>
+<div class="bg-surface-container-highest border border-outline-variant rounded p-md mt-sm font-code-md text-code-md text-primary-fixed-dim overflow-x-auto">
+<code>$ cryptsetup luksOpen /dev/nvme1n1 cryptdata --key-file=/dev/shm/ephemeral_token.key</code><br/>
+<code>$ mount /dev/mapper/cryptdata /mnt/recovery_target</code>
+</div>
+<div class="p-md bg-tertiary-container/10 border-l-4 border-tertiary text-on-surface mt-md flex gap-md rounded-r">
+<span class="material-symbols-outlined text-tertiary shrink-0">warning</span>
+<div>
+<strong class="block text-tertiary font-semibold mb-xs">Critical Warning</strong>
+<span class="text-on-surface-variant">Failure to cleanly unmount and close the LUKS container after recovery will trigger an automatic hardware quarantine protocol upon reboot.</span>
+</div>
+</div>
+</div>
+<div class="space-y-md">
+<h3 class="font-headline-md text-headline-md text-primary font-semibold flex items-center gap-sm border-b border-outline-variant/50 pb-sm mt-lg">
+<span class="text-outline-variant text-body-sm font-mono">03</span> Phase 3: Service Restoration
+                            </h3>
+<p>
+                                Step 4: Validate database consistency via the internal toolset. Check logs for WAL corruption.
+                            </p>
+<p>
+                                Step 5: Initiate the master promotion script and update DNS routing tables to point to the newly restored active node.
+                            </p>
+</div>
+<div class="mt-xl pt-lg border-t border-outline-variant border-dashed text-center">
+<span class="font-code-md text-code-md text-outline-variant flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[14px]">verified</span>
+                                END OF SECURE DOCUMENT
+                            </span>
+</div>
+</article>
+</div>
+</div>
+</section>
+</main>
+</body></html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<!-- CANONICAL: 密码生成器模态。见 UNIFIED-SPEC.md §2.5 变体 F -->
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeyVault - 密码生成器</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed": "#281800",
+                        "on-primary-container": "#003a6b",
+                        "tertiary": "#ffba42",
+                        "secondary-fixed": "#83fc89",
+                        "secondary-fixed-dim": "#67df70",
+                        "tertiary-container": "#da9600",
+                        "on-primary": "#00315c",
+                        "surface-container-low": "#141c24",
+                        "surface-container": "#182028",
+                        "surface-container-highest": "#2d363e",
+                        "secondary-container": "#27a640",
+                        "on-primary-fixed": "#001c38",
+                        "surface-bright": "#313a43",
+                        "error": "#ffb4ab",
+                        "background": "#0b141c",
+                        "on-error": "#690005",
+                        "inverse-on-surface": "#29313a",
+                        "on-primary-fixed-variant": "#004882",
+                        "primary-fixed-dim": "#a2c9ff",
+                        "primary-fixed": "#d3e4ff",
+                        "on-background": "#dae3ee",
+                        "on-secondary": "#00390d",
+                        "on-surface-variant": "#c0c7d4",
+                        "on-tertiary": "#432c00",
+                        "surface-dim": "#0b141c",
+                        "secondary": "#67df70",
+                        "surface-container-lowest": "#060f16",
+                        "outline": "#8b919d",
+                        "on-secondary-container": "#00320a",
+                        "on-error-container": "#ffdad6",
+                        "outline-variant": "#414752",
+                        "surface-variant": "#2d363e",
+                        "inverse-primary": "#0060aa",
+                        "on-secondary-fixed-variant": "#005317",
+                        "tertiary-fixed-dim": "#ffba42",
+                        "tertiary-fixed": "#ffddaf",
+                        "on-secondary-fixed": "#002105",
+                        "surface-container-high": "#222b33",
+                        "surface": "#0b141c",
+                        "inverse-surface": "#dae3ee",
+                        "on-surface": "#dae3ee",
+                        "on-tertiary-container": "#4f3400",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#614000",
+                        "primary-container": "#58a6ff",
+                        "primary": "#a2c9ff",
+                        "surface-tint": "#a2c9ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "md": "16px",
+                        "xl": "40px",
+                        "xs": "4px",
+                        "sidebar-width": "260px",
+                        "detail-panel-width": "400px",
+                        "lg": "24px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "code-md": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "code-md": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom range slider styling */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #58A6FF;
+            cursor: pointer;
+            margin-top: -6px; /* You need to specify a margin in Chrome, but in Firefox and IE it is automatic */
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #30363D;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background h-screen flex items-center justify-center overflow-hidden font-body-md text-body-md">
+<!-- Modal Backdrop Overlay (Level 2) -->
+<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+<!-- Modal Container (Level 2 Surface) -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl shadow-2xl w-full max-w-[500px] flex flex-col z-50 overflow-hidden">
+<!-- Header -->
+<div class="flex items-center justify-between p-md border-b border-outline-variant">
+<h2 class="font-headline-md text-headline-md text-on-surface">密码生成器</h2>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Content Area -->
+<div class="p-lg flex flex-col gap-lg">
+<!-- Password Display Result Area -->
+<div class="bg-surface border border-primary/30 rounded-lg p-4 flex items-center justify-between shadow-[0_0_8px_rgba(88,166,255,0.15)] ring-1 ring-primary/20">
+<div class="font-code-md text-code-md text-primary truncate flex-1 tracking-widest text-lg select-all">
+                        x7#9qP$L2&amp;mK!v8W
+                    </div>
+<div class="flex items-center gap-2 ml-4">
+<button class="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-variant rounded-md transition-colors" title="重新生成">
+<span class="material-symbols-outlined text-[20px]">refresh</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-variant rounded-md transition-colors" title="复制">
+<span class="material-symbols-outlined text-[20px]">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Strength Indicator -->
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between items-center px-1">
+<span class="font-label-caps text-label-caps text-on-surface-variant">密码强度</span>
+<span class="font-label-caps text-label-caps text-secondary-container">极强</span>
+</div>
+<div class="flex gap-1 h-[4px]">
+<div class="h-full flex-1 bg-secondary-container rounded-l-full"></div>
+<div class="h-full flex-1 bg-secondary-container"></div>
+<div class="h-full flex-1 bg-secondary-container"></div>
+<div class="h-full flex-1 bg-secondary-container rounded-r-full"></div>
+</div>
+</div>
+<!-- Length Slider -->
+<div class="flex flex-col gap-md">
+<div class="flex justify-between items-center">
+<span class="text-on-surface">长度</span>
+<div class="bg-surface border border-outline-variant rounded-md px-2 py-1 flex items-center">
+<input class="bg-transparent border-none text-on-surface w-[40px] text-center focus:ring-0 p-0 font-code-md text-code-md" max="128" min="8" type="number" value="16"/>
+</div>
+</div>
+<input class="w-full appearance-none bg-transparent" max="128" min="8" type="range" value="16"/>
+</div>
+<!-- Character Sets Grid -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Uppercase -->
+<label class="flex items-center gap-3 cursor-pointer group">
+<div class="relative flex items-center">
+<input checked="" class="peer sr-only" type="checkbox"/>
+<div class="w-4 h-4 bg-surface border border-outline-variant rounded-[2px] peer-checked:bg-primary-container peer-checked:border-primary-container flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[14px] text-background opacity-0 peer-checked:opacity-100 font-bold">check</span>
+</div>
+</div>
+<span class="text-on-surface group-hover:text-primary-container transition-colors">大写字母 (A-Z)</span>
+</label>
+<!-- Lowercase -->
+<label class="flex items-center gap-3 cursor-pointer group">
+<div class="relative flex items-center">
+<input checked="" class="peer sr-only" type="checkbox"/>
+<div class="w-4 h-4 bg-surface border border-outline-variant rounded-[2px] peer-checked:bg-primary-container peer-checked:border-primary-container flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[14px] text-background opacity-0 peer-checked:opacity-100 font-bold">check</span>
+</div>
+</div>
+<span class="text-on-surface group-hover:text-primary-container transition-colors">小写字母 (a-z)</span>
+</label>
+<!-- Numbers -->
+<label class="flex items-center gap-3 cursor-pointer group">
+<div class="relative flex items-center">
+<input checked="" class="peer sr-only" type="checkbox"/>
+<div class="w-4 h-4 bg-surface border border-outline-variant rounded-[2px] peer-checked:bg-primary-container peer-checked:border-primary-container flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[14px] text-background opacity-0 peer-checked:opacity-100 font-bold">check</span>
+</div>
+</div>
+<span class="text-on-surface group-hover:text-primary-container transition-colors">数字 (0-9)</span>
+</label>
+<!-- Symbols -->
+<label class="flex items-center gap-3 cursor-pointer group">
+<div class="relative flex items-center">
+<input checked="" class="peer sr-only" type="checkbox"/>
+<div class="w-4 h-4 bg-surface border border-outline-variant rounded-[2px] peer-checked:bg-primary-container peer-checked:border-primary-container flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[14px] text-background opacity-0 peer-checked:opacity-100 font-bold">check</span>
+</div>
+</div>
+<span class="text-on-surface group-hover:text-primary-container transition-colors">符号 (!@#$)</span>
+</label>
+</div>
+<hr class="border-t border-outline-variant/50"/>
+<!-- Advanced Options -->
+<div class="flex flex-col gap-3">
+<label class="flex items-center justify-between cursor-pointer group">
+<span class="text-on-surface-variant text-sm group-hover:text-on-surface transition-colors">排除易混淆字符 (i, l, 1, L, o, 0, O)</span>
+<div class="relative inline-flex items-center">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-surface after:border-outline-variant after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container peer-checked:after:bg-background"></div>
+</div>
+</label>
+<label class="flex items-center justify-between cursor-pointer group">
+<span class="text-on-surface-variant text-sm group-hover:text-on-surface transition-colors">Diceware 模式 (基于单词)</span>
+<div class="relative inline-flex items-center">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-surface-variant after:border-outline-variant after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container peer-checked:after:bg-background"></div>
+</div>
+</label>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="flex items-center justify-end gap-md p-md border-t border-outline-variant bg-surface-container-low mt-auto">
+<button class="px-4 py-2 border border-outline-variant text-on-surface hover:bg-surface-variant rounded-md transition-colors font-headline-sm">
+                    取消
+                </button>
+<button class="px-4 py-2 bg-primary-container text-background font-bold hover:brightness-110 rounded-md transition-all shadow-[0_0_10px_rgba(88,166,255,0.2)]">
+                    应用至条目
+                </button>
+</div>
+</div>
+</div>
+</body></html>

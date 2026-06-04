@@ -2,9 +2,11 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
 
 const router = useRouter()
 const auth = useAuthStore()
+const settings = useSettingsStore()
 
 const step = ref(1)
 const password = ref('')
@@ -35,6 +37,7 @@ async function handleSetup() {
   }
   const success = await auth.setup(password.value)
   if (success) {
+    await settings.load()
     router.push('/vault')
   } else {
     error.value = auth.error || '设置失败'
