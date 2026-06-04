@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<!-- CANONICAL: 修改主密码模态。见 PROTOTYPE-PROMPTS P1-4 -->
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeyVault - 修改主密码</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#ffba42",
+                        "primary-container": "#58a6ff",
+                        "surface-container-highest": "#2d363e",
+                        "on-error": "#690005",
+                        "on-tertiary-container": "#4f3400",
+                        "on-surface-variant": "#c0c7d4",
+                        "surface-container-low": "#161B22",
+                        "surface": "#161B22",
+                        "error-container": "#93000a",
+                        "outline-variant": "#30363D",
+                        "secondary-fixed-dim": "#67df70",
+                        "secondary-container": "#27a640",
+                        "outline": "#8b919d",
+                        "surface-variant": "#2d363e",
+                        "tertiary-fixed-dim": "#ffba42",
+                        "inverse-on-surface": "#29313a",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#614000",
+                        "secondary": "#67df70",
+                        "primary-fixed": "#d3e4ff",
+                        "on-tertiary-fixed": "#281800",
+                        "inverse-surface": "#dae3ee",
+                        "surface-dim": "#0D1117",
+                        "on-tertiary": "#432c00",
+                        "on-background": "#dae3ee",
+                        "on-secondary": "#00390d",
+                        "surface-container": "#1C2128",
+                        "on-surface": "#dae3ee",
+                        "surface-container-lowest": "#060f16",
+                        "on-primary": "#00315c",
+                        "on-secondary-fixed-variant": "#005317",
+                        "surface-bright": "#313a43",
+                        "tertiary-fixed": "#ffddaf",
+                        "surface-tint": "#a2c9ff",
+                        "on-primary-container": "#003a6b",
+                        "inverse-primary": "#0060aa",
+                        "tertiary-container": "#da9600",
+                        "error": "#ffb4ab",
+                        "background": "#0D1117",
+                        "secondary-fixed": "#83fc89",
+                        "primary-fixed-dim": "#a2c9ff",
+                        "on-secondary-container": "#00320a",
+                        "primary": "#a2c9ff",
+                        "on-secondary-fixed": "#002105",
+                        "on-primary-fixed": "#001c38",
+                        "surface-container-high": "#222b33",
+                        "on-primary-fixed-variant": "#004882"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xl": "40px",
+                        "sm": "8px",
+                        "detail-panel-width": "400px",
+                        "lg": "24px",
+                        "xs": "4px",
+                        "sidebar-width": "260px",
+                        "base": "4px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "code-md": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "code-md": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>body {
+    background-color: #0D1117;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh
+    }
+.window-container {
+    width: 1200px;
+    height: 800px;
+    position: relative;
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuBqBRQbb5s_H6523by1a62rojZP_1-L0NnDOR9kP0CG9muDj2GZCPEObNZ_S6_L98GwNXw59uVgKZ77Jwz97KiSnPvXjWtoLtau8nGlPoAvWmzli0OHKOOoImLGtNqcv_8UMaYZtU3dJo2koDTMSwYkvNGxTLjJANRG_w3_HycTDhbHDo9P2y5gOtqonjlRlTnzO02_JOyo6MDtveMExqD0B97z5hPmFr0egiXlZWKNiVJJhD8Z-cwTmvho0EEbHiGZECc-yx6MPcQ);
+    background-size: cover;
+    background-position: center;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: 1px solid #30363D
+    }
+.backdrop-blur-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(13, 17, 23, 0.6);
+    backdrop-filter: blur(8px);
+    z-index: 10
+    }
+.modal-wrapper {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 50
+    }
+.secure-input-wrapper {
+    position: relative
+    }
+.secure-input {
+    width: 100%;
+    background-color: #0D1117;
+    border: 1px solid #30363D;
+    border-radius: 4px;
+    padding: 8px 36px 8px 12px;
+    color: #dae3ee;
+    transition: all 0.2s
+    }
+.secure-input:focus {
+    outline: none;
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2)
+    }
+.input-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translatey(-50%);
+    color: #8b919d;
+    cursor: pointer
+    }
+.strength-meter {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px
+    }
+.strength-segment {
+    height: 4px;
+    flex: 1;
+    background-color: #30363D;
+    border-radius: 2px
+    }
+.strength-segment.weak {
+    background-color: #ffb4ab
+    }
+.strength-segment.fair {
+    background-color: #da9600
+    }
+.strength-segment.good {
+    background-color: #ffba42
+    }
+.strength-segment.strong {
+    background-color: #3FB950
+    }</style>
+</head>
+<body class="font-body-md text-on-surface">
+<div class="window-container">
+<div class="h-[40px] w-full sticky top-0 z-50 bg-surface dark:bg-surface border-b border-outline-variant dark:border-outline-variant flat no shadows flex justify-between items-center px-md cursor-default select-none">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">shield_lock</span>
+<span class="font-headline-md text-headline-md font-black text-primary dark:text-primary">KeyVault</span>
+</div>
+<div class="flex gap-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] hover:text-primary transition-opacity cursor-pointer">chrome_minimize</span>
+<span class="material-symbols-outlined text-[16px] hover:text-primary transition-opacity cursor-pointer">chrome_maximize</span>
+<span class="material-symbols-outlined text-[16px] hover:text-primary transition-opacity cursor-pointer">close</span>
+</div>
+</div>
+<div class="backdrop-blur-overlay"></div>
+<div class="modal-wrapper">
+<div class="w-full max-w-[440px] bg-[#161B22] border border-[#30363D] rounded-lg shadow-2xl flex flex-col">
+<div class="p-lg border-b border-[#30363D] flex items-center justify-between">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">修改主密码</h2>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-on-surface">close</span>
+</div>
+<div class="p-lg flex flex-col gap-lg">
+<div class="bg-[#1C2128] border border-[#30363D] rounded p-sm flex items-start gap-sm">
+<span class="material-symbols-outlined text-tertiary text-[18px] mt-[2px]">warning</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">修改后需用新密码解锁，请确保记得新密码</p>
+</div>
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">当前主密码</label>
+<div class="secure-input-wrapper">
+<input class="secure-input font-code-md text-code-md" placeholder="输入当前密码" type="password" value="••••••••••••"/>
+<span class="material-symbols-outlined input-icon text-[16px]">visibility_off</span>
+</div>
+</div>
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">新主密码</label>
+<div class="secure-input-wrapper">
+<input class="secure-input font-code-md text-code-md" placeholder="输入新密码" type="password" value="••••••••••••••••"/>
+<span class="material-symbols-outlined input-icon text-[16px]">visibility</span>
+</div>
+<div class="strength-meter">
+<div class="strength-segment weak"></div>
+<div class="strength-segment fair"></div>
+<div class="strength-segment good"></div>
+<div class="strength-segment"></div>
+</div>
+<div class="flex justify-end">
+<span class="font-label-caps text-label-caps text-tertiary-fixed-dim">Good</span>
+</div>
+</div>
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">确认新密码</label>
+<div class="secure-input-wrapper">
+<input class="secure-input font-code-md text-code-md" placeholder="再次输入新密码" type="password"/>
+</div>
+</div>
+</div>
+<div class="p-lg border-t border-[#30363D] flex justify-end gap-md bg-[#1C2128] rounded-b-lg">
+<button class="px-md py-sm rounded border border-transparent text-[#C9D1D9] hover:bg-[#30363D] font-body-md text-body-md transition-colors">
+                        取消
+                    </button>
+<button class="px-md py-sm rounded bg-primary-container text-[#0D1117] font-headline-md text-headline-md font-semibold hover:opacity-90 transition-opacity">
+                        确认修改
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

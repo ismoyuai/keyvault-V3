@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<!-- CANONICAL: 主界面三栏 · 回收站。见 PROTOTYPE-PROMPTS P2-1 -->
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeyVault - 回收站</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b141c; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d363e; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #414752; 
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#67df70",
+                        "inverse-primary": "#0060aa",
+                        "surface-bright": "#313a43",
+                        "inverse-surface": "#dae3ee",
+                        "tertiary-container": "#da9600",
+                        "on-error": "#690005",
+                        "surface-variant": "#2d363e",
+                        "surface-container": "#1C2128",
+                        "primary-fixed": "#d3e4ff",
+                        "secondary-fixed": "#83fc89",
+                        "primary-fixed-dim": "#a2c9ff",
+                        "on-surface-variant": "#c0c7d4",
+                        "on-secondary-fixed": "#002105",
+                        "background": "#0D1117",
+                        "on-background": "#dae3ee",
+                        "on-tertiary-container": "#4f3400",
+                        "surface-container-highest": "#2d363e",
+                        "tertiary": "#ffba42",
+                        "secondary-fixed-dim": "#67df70",
+                        "on-primary-fixed": "#001c38",
+                        "on-tertiary": "#432c00",
+                        "on-primary-fixed-variant": "#004882",
+                        "secondary-container": "#27a640",
+                        "surface-container-high": "#222b33",
+                        "surface": "#161B22",
+                        "surface-dim": "#0D1117",
+                        "primary": "#a2c9ff",
+                        "on-primary": "#00315c",
+                        "on-error-container": "#ffdad6",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#614000",
+                        "on-surface": "#dae3ee",
+                        "surface-tint": "#a2c9ff",
+                        "surface-container-lowest": "#060f16",
+                        "on-primary-container": "#003a6b",
+                        "outline-variant": "#30363D",
+                        "error": "#ffb4ab",
+                        "surface-container-low": "#161B22",
+                        "on-secondary-fixed-variant": "#005317",
+                        "on-tertiary-fixed": "#281800",
+                        "tertiary-fixed": "#ffddaf",
+                        "tertiary-fixed-dim": "#ffba42",
+                        "primary-container": "#58a6ff",
+                        "outline": "#8b919d",
+                        "on-secondary": "#00390d",
+                        "inverse-on-surface": "#29313a",
+                        "on-secondary-container": "#00320a",
+                        /* Custom specific overrides for user request */
+                        "ui-bg": "#0D1117",
+                        "ui-surface": "#161B22",
+                        "ui-border": "#30363D",
+                        "ui-primary": "#58A6FF",
+                        "ui-error": "#F85149"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sidebar-width": "260px",
+                        "lg": "24px",
+                        "detail-panel-width": "400px",
+                        "md": "16px",
+                        "sm": "8px",
+                        "base": "4px",
+                        "xl": "40px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "code-md": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "code-md": ["13px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["18px", {"lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface h-screen w-screen overflow-hidden flex flex-col font-body-md select-none">
+<!-- TopAppBar -->
+<header class="bg-background text-primary-container font-headline-md text-headline-md font-bold docked full-width top-0 h-[40px] border-b border-outline-variant flat no shadows transition-colors duration-200 flex justify-between items-center px-4 w-full shrink-0 drag-region" style="-webkit-app-region: drag;">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-xl" style="font-variation-settings: 'FILL' 1;">shield_lock</span>
+<span class="text-on-surface font-body-sm tracking-wider text-opacity-80">KeyVault</span>
+</div>
+<div class="flex items-center gap-0 no-drag" style="-webkit-app-region: no-drag;">
+<button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors"><span class="material-symbols-outlined text-[18px]">remove</span></button>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors"><span class="material-symbols-outlined text-[18px]">fullscreen</span></button>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:bg-error hover:text-white transition-colors"><span class="material-symbols-outlined text-[18px]">close</span></button>
+</div>
+</header>
+<!-- Main Workspace -->
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-low text-primary-container font-body-md text-body-md docked h-full w-sidebar-width left-0 border-r border-outline-variant flat no shadows transition-all duration-150 ease-in-out flex flex-col h-full py-md w-[260px] shrink-0 z-10">
+<div class="px-md mb-lg">
+<div class="flex items-center gap-3 p-2 rounded-lg bg-background border border-outline-variant">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-primary-container font-bold overflow-hidden border border-outline-variant">
+<img alt="User Profile" class="w-full h-full object-cover opacity-80" data-alt="A close-up portrait of a user in a highly stylized, dark, and tech-focused aesthetic. The image features high contrast with subtle cool blue undertones to match a minimalist developer tool environment. The overall tone is secure, professional, and slightly shadowed to emphasize anonymity and precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQXQkP-7tF9PizbnhJ-LQcZn17mR1TuiD8jFmnfw8ozDKR5esby0xXghb84KjK3yLAXtWHiIovu4yjJhgLfB_kmOw00qLgQf6LbJ7UIgMI038Kt576VwBSWqikhqXOEI5OGcu0b6IZ8Fnxs3tnaaiTQM9MyWwJJxOwWZlyl3txZefaBduDmu5o_mL54b4CRhP56YtB8KxzuIad356dtwdNOdHoG1vtXhjrOVvLjoXy6HF-gNs0eApojBP9BkxUCvC_MC4fzCO_j0E"/>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-primary-container text-sm leading-tight">KeyVault</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant text-xs">本地库</span>
+</div>
+</div>
+</div>
+<div class="px-md mb-md">
+<button class="w-full py-2 bg-primary-container text-on-primary-container font-bold rounded flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    新建条目
+                </button>
+</div>
+<div class="flex-1 overflow-y-auto px-sm flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70">inventory_2</span>
+                    全部条目
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70">star</span>
+                    收藏
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70">key</span>
+                    密码
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70">code</span>
+                    API 密钥
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70">description</span>
+                    安全笔记
+                </a>
+<div class="h-px bg-outline-variant mx-2 my-2"></div>
+<a class="flex items-center gap-3 px-3 py-2 bg-[#1C2128] text-primary-container font-bold border-l-2 border-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">delete</span>
+                    回收站
+                </a>
+</div>
+<div class="mt-auto px-sm pt-4 border-t border-outline-variant flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70">settings</span>
+                    设置
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant font-body-md hover:bg-surface-variant hover:text-on-surface transition-colors text-opacity-70" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70">lock</span>
+                    锁定
+                </a>
+</div>
+</nav>
+<!-- List View -->
+<div class="flex-1 flex flex-col bg-background overflow-hidden relative">
+<!-- List Header -->
+<div class="h-16 px-6 border-b border-outline-variant flex items-center justify-between shrink-0 bg-background/80 backdrop-blur-sm z-10 sticky top-0">
+<h1 class="font-headline-lg text-headline-lg text-on-surface flex items-center gap-2">
+                    回收站
+                    <span class="bg-surface-variant text-on-surface-variant text-xs px-2 py-0.5 rounded-full font-code-md">2</span>
+</h1>
+<div class="relative w-64 group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] group-focus-within:text-primary-container transition-colors">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded text-sm text-on-surface pl-9 pr-3 py-1.5 focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container/50 transition-all placeholder:text-on-surface-variant/50" placeholder="搜索已删除项..." type="text"/>
+</div>
+</div>
+<!-- List Content -->
+<div class="flex-1 overflow-y-auto">
+<div class="flex flex-col">
+<!-- Item 1 (Selected) -->
+<div class="flex items-center px-6 py-3 border-b border-outline-variant bg-[#21262D] cursor-pointer relative group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary-container"></div>
+<div class="w-10 h-10 rounded flex items-center justify-center bg-background border border-outline-variant text-primary-container mr-4 shrink-0">
+<span class="material-symbols-outlined">mail</span>
+</div>
+<div class="flex-1 min-w-0 mr-4">
+<div class="flex items-baseline justify-between mb-0.5">
+<h3 class="font-body-md text-body-md text-on-surface font-semibold truncate">Personal Gmail</h3>
+<span class="font-code-md text-code-md text-on-surface-variant text-[11px]">10:42</span>
+</div>
+<div class="flex items-center text-on-surface-variant text-xs opacity-80">
+<span class="truncate">mail.google.com</span>
+<span class="mx-2 opacity-30">•</span>
+<span class="text-error flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span>
+                                    剩余 29 天自动清除
+                                </span>
+</div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center px-6 py-3 border-b border-outline-variant hover:bg-surface-container-high cursor-pointer transition-colors group">
+<div class="w-10 h-10 rounded flex items-center justify-center bg-background border border-outline-variant text-tertiary mr-4 shrink-0">
+<span class="material-symbols-outlined">cloud</span>
+</div>
+<div class="flex-1 min-w-0 mr-4">
+<div class="flex items-baseline justify-between mb-0.5">
+<h3 class="font-body-md text-body-md text-on-surface font-semibold truncate">AWS Root Key</h3>
+<span class="font-code-md text-code-md text-on-surface-variant text-[11px]">昨天</span>
+</div>
+<div class="flex items-center text-on-surface-variant text-xs opacity-80">
+<span class="truncate">aws.amazon.com</span>
+<span class="mx-2 opacity-30">•</span>
+<span class="text-error flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span>
+                                    剩余 14 天自动清除
+                                </span>
+</div>
+</div>
+</div>
+<!-- Empty State Placeholder if needed -->
+<!-- <div class="flex-1 flex flex-col items-center justify-center opacity-40 mt-20">
+                        <span class="material-symbols-outlined text-6xl mb-4">delete_sweep</span>
+                        <p class="font-body-md text-body-md">回收站为空</p>
+                    </div> -->
+</div>
+</div>
+</div>
+<!-- Detail Panel -->
+<div class="w-detail-panel-width bg-surface-container-low border-l border-outline-variant flex flex-col shrink-0">
+<!-- Detail Header Actions -->
+<div class="h-16 px-6 border-b border-outline-variant flex items-center justify-between shrink-0 bg-surface-container-low/80 backdrop-blur-sm z-10 sticky top-0">
+<span class="text-on-surface-variant font-code-md text-xs">ID: 8F92A-4B2C</span>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 border border-outline-variant text-on-surface rounded hover:bg-surface-variant transition-colors flex items-center gap-1 text-sm">
+<span class="material-symbols-outlined text-[16px]">restore</span>
+                        恢复
+                    </button>
+<button class="px-3 py-1.5 bg-error text-white rounded hover:bg-error/90 transition-colors flex items-center gap-1 text-sm font-semibold border border-ui-error/50">
+<span class="material-symbols-outlined text-[16px]">delete_forever</span>
+                        永久删除
+                    </button>
+</div>
+</div>
+<!-- Detail Content -->
+<div class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+<!-- Main Header info -->
+<div class="flex items-start gap-4">
+<div class="w-16 h-16 rounded-lg bg-background border border-outline-variant flex items-center justify-center text-primary-container text-3xl shadow-sm">
+<span class="material-symbols-outlined" style="font-size: 32px;">mail</span>
+</div>
+<div class="flex flex-col justify-center h-16">
+<h2 class="font-headline-lg text-headline-lg text-on-surface leading-tight mb-1">Personal Gmail</h2>
+<a class="text-primary-container font-body-sm text-body-sm hover:underline flex items-center gap-1" href="#">
+                            mail.google.com
+                            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</a>
+</div>
+</div>
+<!-- Meta Info Alert -->
+<div class="bg-error/10 border border-ui-error/30 rounded p-3 flex items-start gap-3">
+<span class="material-symbols-outlined text-error mt-0.5">warning</span>
+<div class="flex flex-col">
+<span class="text-error font-semibold text-sm">即将删除</span>
+<span class="text-on-surface-variant text-xs mt-1">此项目于 2023-10-24 10:42 被删除。它将在 29 天后被永久抹除，届时将无法恢复。</span>
+</div>
+</div>
+<div class="h-px bg-ui-border w-full"></div>
+<!-- Fields -->
+<div class="flex flex-col gap-4">
+<!-- Field: 用户名 -->
+<div class="flex flex-col gap-1.5 relative group">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">用户名 / 邮箱</label>
+<div class="flex items-center relative">
+<input class="w-full bg-background border border-outline-variant rounded px-3 py-2 font-code-md text-code-md text-on-surface focus:outline-none focus:border-primary-container/50 text-opacity-70 selection:bg-primary-container/30" readonly="" type="text" value="user@example.com"/>
+<button class="absolute right-2 p-1 text-on-surface-variant hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity bg-background rounded">
+<span class="material-symbols-outlined text-[18px]">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Field: Password -->
+<div class="flex flex-col gap-1.5 relative group">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">密码</label>
+<div class="flex items-center relative">
+<input class="w-full bg-background border border-outline-variant rounded px-3 py-2 font-code-md text-code-md text-on-surface focus:outline-none focus:border-primary-container/50 text-opacity-70 selection:bg-primary-container/30 pr-16" readonly="" type="password" value="super_secure_password_123!@#"/>
+<div class="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background pl-2">
+<button class="p-1 text-on-surface-variant hover:text-on-surface rounded">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="p-1 text-on-surface-variant hover:text-on-surface rounded">
+<span class="material-symbols-outlined text-[18px]">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Field: TOTP Placeholder -->
+<div class="flex flex-col gap-1.5 relative group">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
+                            身份验证器 (TOTP)
+                            <span class="bg-surface-variant px-1 rounded text-[9px] text-on-surface-variant border border-outline-variant">回收站中隐藏</span>
+</label>
+<div class="w-full bg-background border border-outline-variant border-dashed rounded px-3 py-2 flex items-center justify-center opacity-50">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">lock_clock</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

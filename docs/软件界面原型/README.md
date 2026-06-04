@@ -1,7 +1,8 @@
 # KeyVault UI 原型索引
 
 > **重构前必读:** [UNIFIED-SPEC.md](./UNIFIED-SPEC.md) · [REQUIREMENTS-COVERAGE.md](./REQUIREMENTS-COVERAGE.md)  
-> **补缺口原型:** [PROTOTYPE-PROMPTS.md](./PROTOTYPE-PROMPTS.md)（AI 工具提示词）  
+> **补缺口原型:** [PROTOTYPE-PROMPTS.md](./PROTOTYPE-PROMPTS.md)（桌面）· [EXTENSION-PROTOTYPE-PROMPTS.md](./EXTENSION-PROTOTYPE-PROMPTS.md)（扩展）  
+> **Stitch 入库:** [stitch_keyvault-软件补充界面/README.md](./stitch_keyvault-软件补充界面/README.md)  
 > **设计令牌:** [keyvault/DESIGN.md](./keyvault/DESIGN.md) · [_shared/tailwind-extend.json](./_shared/tailwind-extend.json)
 
 ## 文档
@@ -11,43 +12,50 @@
 | `keyvault/DESIGN.md` | 主规范（暗色，v1 唯一主题） |
 | `UNIFIED-SPEC.md` | 壳层、布局、组件 canonical 决策 |
 | `REQUIREMENTS-COVERAGE.md` | 产品需求 ↔ 原型 ↔ 代码覆盖矩阵 |
-| `PROTOTYPE-PROMPTS.md` | 缺口界面 AI 补图提示词（12+1 条） |
+| `PROTOTYPE-PROMPTS.md` | 桌面缺口界面 AI 补图提示词 |
+| `EXTENSION-PROTOTYPE-PROMPTS.md` | 浏览器扩展 AI 提示词 |
+| `_shared/ingest-stitch-prototypes.py` | Stitch 补充包入库脚本 |
 | `_archive/README.md` | 归档原型说明 |
 
-## 已有 Canonical 原型
+## Canonical 原型（已入库）
 
-| 目录 | 界面 | 说明 |
-|------|------|------|
-| `_1` | Setup Step 1 | 设主密码（需修订为 STEP 1/2，见 P0-1） |
-| `keyvault_6` | 解锁 | 桌面完整版 |
-| `keyvault_3` | 主界面 | 三栏 + 命令面板 |
-| `api_keyvault` | API Key | 专用详情 |
-| `keyvault_7` | 安全笔记 | 窄列表 + 宽阅读区 |
-| `keyvault_1` | 新建条目 | 模态（需扩展 10 类型，见 P1-2） |
-| `keyvault_4` | 密码生成器 | 模态 |
-| `keyvault_2` | 设置 | 双导航 Bento（需扩展，见 P1-3） |
+| 目录 | 界面 | Vue 目标 |
+|------|------|----------|
+| `setup_1/` · `_1/` | Setup 第 1 步 | `SetupView.vue` |
+| `setup_2/` | Setup 第 2 步 | `SetupView.vue` |
+| `keyvault_6` | 解锁 | `UnlockView.vue` |
+| `unlock_lockout/` | 解锁锁定态 | `UnlockView.vue` |
+| `keyvault_3` | 主界面 + 命令面板 | `VaultView.vue` |
+| `modal_delete/` | 删除确认 | `KvModal` |
+| `entry_detail_generic/` | 通用详情（SSH） | `ItemDetail.vue` |
+| `api_keyvault` | API Key 详情 | `ItemDetail.vue` |
+| `keyvault_7` | 安全笔记 | Note 变体 |
+| `keyvault_1/` · `modal_new_entry/` | 新建网站密码 | `ItemForm.vue` |
+| `modal_change_password/` | 修改主密码 | `SettingsView.vue` |
+| `keyvault_4` | 密码生成器 | `PasswordGenerator.vue` |
+| `keyvault_2` | 设置 Bento | `SettingsView.vue` |
+| `vault_trash/` | 回收站 | `VaultView` trash 路由 |
+| `empty_states/` | 空状态三场景 | 列表/搜索/回收站 |
+| `component_clipboard_timer/` | 剪贴板倒计时 | `ClipboardTimer.vue` |
+| `modal_emergency_wipe/` | 紧急擦除 Future | — |
 
-## 待生成原型（用户 + AI 工具）
+## 待生成 / 待扩展
 
-按 [PROTOTYPE-PROMPTS.md](./PROTOTYPE-PROMPTS.md) 顺序生成，放入下列目录并更新 [REQUIREMENTS-COVERAGE.md](./REQUIREMENTS-COVERAGE.md) 检查表：
+| 目录 | 优先级 | 说明 |
+|------|--------|------|
+| `keyvault_1` 10 类型网格 | Must | 新建模态需补类型选择 Step A（见 P1-2） |
+| `keyvault_2` 扩展 | Should | HIBP 泄露检测、剪贴板设置（见 P1-3） |
+| `extension/*` | P0+ | 见 EXTENSION-PROTOTYPE-PROMPTS.md |
 
-| 目录 | 优先级 | 提示词 |
-|------|--------|--------|
-| `setup_2/` | Must | P0-2 |
-| `modal_delete/` | Must | P0-3 |
-| `entry_detail_generic/` | Must | P0-4 |
-| `unlock_lockout/` | Must | P1-1 |
-| `modal_change_password/` | Should | P1-4 |
-| `vault_trash/` | Should | P2-1 |
-| `empty_states/` | Should | P2-2 |
-| `component_clipboard_timer/` | Should | P2-3 |
-| `modal_emergency_wipe/` | Future | Future |
+## 浏览器扩展原型（待生成）
 
-修订现有目录（非新建）：`_1`（P0-1）、`keyvault_1`（P1-2）、`keyvault_2`（P1-3）。
+见 [EXTENSION-PROTOTYPE-PROMPTS.md](./EXTENSION-PROTOTYPE-PROMPTS.md) → `extension/` 子目录。
 
 ## 归档（勿作 v1 实现依据）
 
-见 [_archive/README.md](./_archive/README.md)：`_2`、`keyvault_5`、`keyvault_8`、`secure_utility_light/`。
+见 [_archive/README.md](./_archive/README.md)：`_2`（恢复密钥）、`secure_utility_light/`（浅色）。
+
+> 注：原归档的 `keyvault_5`/`keyvault_8` 已由 Stitch 包重新定义为 `empty_states`/`modal_emergency_wipe` canonical。
 
 ## 布局变体
 
@@ -57,29 +65,12 @@
 设置双导航:   Side 260px | SettingsNav 192px | Content flex
 Setup:        TopBar 40px | 居中卡片（2 步，无侧栏）
 解锁:         TopBar 40px | 居中卡片 max ~480px
-模态:         新建 560px | 生成器 480px | 命令面板 600px
+模态:         新建 560px | 生成器 480px | 删除 420px
 ```
-
-## Vue 映射
-
-| 原型 | 目标 |
-|------|------|
-| `_1`, `setup_2` | `SetupView.vue` |
-| `keyvault_6`, `unlock_lockout` | `UnlockView.vue` |
-| `keyvault_3` | `VaultView.vue` |
-| `api_keyvault`, `entry_detail_generic` | `ItemDetail.vue` |
-| `keyvault_7` | Note 变体 |
-| `keyvault_1` | `ItemForm.vue` |
-| `keyvault_4` | `PasswordGenerator.vue` |
-| `keyvault_2`, `modal_change_password` | `SettingsView.vue` |
-| `keyvault_3` overlay | `CommandPalette.vue` |
-| `modal_delete` | `KvModal` 删除流 |
-| `component_clipboard_timer` | `ClipboardTimer.vue` |
 
 ## 入库流程
 
-1. AI 工具生成 → 保存至 `docs/软件界面原型/<目录>/`
-2. 文件命名：`code.html`（可选）+ `screen.png`
-3. HTML 顶部加 `<!-- CANONICAL: ... -->` 注释
-4. 运行 `python _shared/apply-unification.py`（若需批量中文化）
-5. 更新 `REQUIREMENTS-COVERAGE.md` 状态 → 本 README 待生成表
+1. AI 生成 → `docs/软件界面原型/<目录>/`（`code.html` + `screen.png`）
+2. HTML 顶部加 `<!-- CANONICAL: ... -->`
+3. 运行 `python _shared/apply-unification.py` 或 `ingest-stitch-prototypes.py`
+4. 更新 [REQUIREMENTS-COVERAGE.md](./REQUIREMENTS-COVERAGE.md)

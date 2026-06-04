@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<!-- CANONICAL: 剪贴板自动清空倒计时条。见 PROTOTYPE-PROMPTS P2-3 -->
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeyVault - 剪贴板倒计时</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary": "#ffba42",
+                        "surface-container-high": "#222b33",
+                        "error": "#ffb4ab",
+                        "surface-dim": "#0D1117",
+                        "on-secondary-container": "#00320a",
+                        "surface-container-lowest": "#060f16",
+                        "surface-container-low": "#161B22",
+                        "on-surface-variant": "#c0c7d4",
+                        "on-primary-fixed": "#001c38",
+                        "outline": "#8b919d",
+                        "primary": "#a2c9ff",
+                        "on-secondary-fixed": "#002105",
+                        "secondary-container": "#27a640",
+                        "on-tertiary-fixed-variant": "#614000",
+                        "on-background": "#dae3ee",
+                        "on-primary-container": "#003a6b",
+                        "on-error": "#690005",
+                        "tertiary-fixed-dim": "#ffba42",
+                        "primary-container": "#58a6ff",
+                        "primary-fixed-dim": "#a2c9ff",
+                        "secondary-fixed": "#83fc89",
+                        "surface-variant": "#2d363e",
+                        "tertiary-container": "#da9600",
+                        "on-tertiary": "#432c00",
+                        "inverse-on-surface": "#29313a",
+                        "on-primary": "#00315c",
+                        "surface": "#161B22",
+                        "secondary-fixed-dim": "#67df70",
+                        "on-surface": "#dae3ee",
+                        "outline-variant": "#30363D",
+                        "secondary": "#67df70",
+                        "primary-fixed": "#d3e4ff",
+                        "error-container": "#93000a",
+                        "on-error-container": "#ffdad6",
+                        "inverse-surface": "#dae3ee",
+                        "on-tertiary-fixed": "#281800",
+                        "on-secondary-fixed-variant": "#005317",
+                        "surface-bright": "#313a43",
+                        "surface-tint": "#a2c9ff",
+                        "on-primary-fixed-variant": "#004882",
+                        "background": "#0D1117",
+                        "on-tertiary-container": "#4f3400",
+                        "on-secondary": "#00390d",
+                        "inverse-primary": "#0060aa",
+                        "tertiary-fixed": "#ffddaf",
+                        "surface-container-highest": "#2d363e",
+                        "surface-container": "#1C2128"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.125rem",
+                        lg: "0.25rem",
+                        xl: "0.5rem",
+                        full: "0.75rem"
+                    },
+                    spacing: {
+                        xl: "40px",
+                        md: "16px",
+                        xs: "4px",
+                        sm: "8px",
+                        lg: "24px",
+                        base: "4px",
+                        "sidebar-width": "260px",
+                        "detail-panel-width": "400px"
+                    },
+                    fontFamily: {
+                        "headline-lg": ["Inter"],
+                        "code-md": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    fontSize: {
+                        "headline-lg": ["24px", { lineHeight: "32px", letterSpacing: "-0.02em", fontWeight: "600" }],
+                        "code-md": ["13px", { lineHeight: "20px", fontWeight: "400" }],
+                        "label-caps": ["11px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "700" }],
+                        "headline-md": ["18px", { lineHeight: "24px", letterSpacing: "-0.01em", fontWeight: "600" }],
+                        "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+                        "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #0D1117; color: #dae3ee; }
+        .hairline-border { border: 1px solid #30363D; }
+        .hairline-border-b { border-bottom: 1px solid #30363D; }
+        .hairline-border-r { border-right: 1px solid #30363D; }
+        .hairline-border-l { border-left: 1px solid #30363D; }
+        .bg-level-1 { background-color: #161B22; }
+        .bg-level-2 { background-color: #1C2128; }
+        .text-muted { color: #8b919d; }
+        .scroll-hidden::-webkit-scrollbar { display: none; }
+        .scroll-hidden { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col font-body-md text-body-md select-none">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center h-[40px] px-md w-full bg-surface dark:bg-surface border-b border-outline-variant dark:border-outline-variant cursor-default select-none">
+<div class="flex items-center gap-2 font-headline-md text-headline-md font-bold text-on-surface dark:text-on-surface">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">shield_lock</span>
+<span>KeyVault</span>
+</div>
+<div class="flex gap-2 text-on-surface-variant dark:text-on-surface-variant">
+<button class="hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors p-1 rounded"><span class="material-symbols-outlined text-[18px]">minimize</span></button>
+<button class="hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors p-1 rounded"><span class="material-symbols-outlined text-[18px]">fullscreen</span></button>
+<button class="hover:bg-error-container hover:text-on-error-container transition-colors p-1 rounded"><span class="material-symbols-outlined text-[18px]">close</span></button>
+</div>
+</header>
+<!-- Main Layout -->
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar -->
+<nav class="w-sidebar-width bg-surface-container-low border-r border-outline-variant flex flex-col py-md shrink-0 w-[260px]">
+<div class="px-md mb-md">
+<button class="w-full py-2 bg-primary-container text-on-primary-container font-bold rounded flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    新建条目
+                </button>
+</div>
+<div class="flex-1 overflow-y-auto px-sm flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-md bg-surface-container text-primary-container font-bold border-l-2 border-primary-container" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+                    全部条目
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]">star</span>
+                    收藏
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]">key</span>
+                    密码
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]">code</span>
+                    API 密钥
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+                    安全笔记
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-variant mt-2" href="#">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+                    回收站
+                </a>
+</div>
+<div class="mt-auto px-sm pt-4 border-t border-outline-variant flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+                    设置
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+                    锁定
+                </a>
+</div>
+</nav>
+<!-- List View (Fluid) -->
+<main class="flex-1 flex flex-col min-w-0 bg-[#0D1117] hairline-border-r">
+<div class="h-12 border-b border-outline-variant flex items-center px-lg bg-surface-container-lowest shrink-0">
+<span class="font-headline-md text-headline-md text-on-surface font-bold">全部条目</span>
+<span class="ml-2 font-code-md text-code-md text-muted bg-surface-variant px-2 py-0.5 rounded">42</span>
+<div class="ml-auto flex items-center gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1.5 text-[16px] text-muted">search</span>
+<input class="w-48 bg-surface-variant text-on-surface font-body-sm text-body-sm rounded-DEFAULT py-1 pl-8 pr-2 border-none focus:ring-1 focus:ring-primary-container" placeholder="搜索条目 (Cmd+K)" type="text"/>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto scroll-hidden">
+<!-- List Items -->
+<div class="px-md py-sm flex flex-col gap-1">
+<div class="group flex items-center gap-4 px-md py-2 hover:bg-[#21262D] rounded-DEFAULT cursor-pointer hairline-border-b border-transparent hover:border-[#30363D] transition-colors">
+<div class="w-8 h-8 bg-white rounded flex items-center justify-center shrink-0">
+<span class="font-headline-md text-body-md font-bold text-black">G</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="font-body-md text-body-md text-on-surface truncate">Google Account</div>
+<div class="font-body-sm text-body-sm text-muted truncate">user@gmail.com</div>
+</div>
+<div class="font-code-md text-code-md text-muted opacity-0 group-hover:opacity-100 transition-opacity">
+                            今天
+                        </div>
+</div>
+<div class="group flex items-center gap-4 px-md py-2 bg-[#21262D] rounded-DEFAULT cursor-pointer hairline-border-b border-[#30363D]">
+<div class="w-8 h-8 bg-[#5865F2] rounded flex items-center justify-center shrink-0">
+<span class="font-headline-md text-body-md font-bold text-white">D</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="font-body-md text-body-md text-on-surface truncate">Discord</div>
+<div class="font-body-sm text-body-sm text-muted truncate">gamer@example.com</div>
+</div>
+<div class="font-code-md text-code-md text-muted">
+                            昨天
+                        </div>
+</div>
+<div class="group flex items-center gap-4 px-md py-2 hover:bg-[#21262D] rounded-DEFAULT cursor-pointer hairline-border-b border-transparent hover:border-[#30363D] transition-colors">
+<div class="w-8 h-8 bg-black rounded flex items-center justify-center shrink-0 border border-outline-variant">
+<span class="font-headline-md text-body-md font-bold text-white">GH</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="font-body-md text-body-md text-on-surface truncate">GitHub (Work)</div>
+<div class="font-body-sm text-body-sm text-muted truncate">dev@company.com</div>
+</div>
+<div class="font-code-md text-code-md text-muted opacity-0 group-hover:opacity-100 transition-opacity">
+                            10月12日
+                        </div>
+</div>
+</div>
+</div>
+</main>
+<!-- Detail Panel (Fixed) -->
+<aside class="w-detail-panel-width bg-surface-container-lowest shrink-0 flex flex-col">
+<div class="h-12 border-b border-outline-variant flex items-center justify-between px-lg shrink-0">
+<span class="font-headline-md text-body-md font-bold text-on-surface">条目详情</span>
+<div class="flex gap-1">
+<button class="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded transition-colors"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+<button class="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded transition-colors"><span class="material-symbols-outlined text-[18px]">favorite</span></button>
+<button class="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded transition-colors"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto scroll-hidden p-lg">
+<div class="flex items-center gap-4 mb-xl">
+<div class="w-16 h-16 bg-[#5865F2] rounded-lg flex items-center justify-center shadow-lg">
+<span class="font-headline-lg text-headline-lg font-bold text-white">D</span>
+</div>
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-1">Discord</h2>
+<span class="font-label-caps text-label-caps bg-surface-variant text-on-surface px-2 py-1 rounded">社交</span>
+</div>
+</div>
+<div class="space-y-6">
+<div>
+<label class="block font-body-sm text-body-sm text-muted mb-1">用户名</label>
+<div class="flex items-center gap-2 group">
+<input class="flex-1 bg-surface-variant border-none rounded-DEFAULT px-3 py-2 font-code-md text-code-md text-on-surface focus:ring-0 cursor-default" readonly="" type="text" value="gamer@example.com"/>
+<button class="p-2 text-muted hover:text-primary-container opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[18px]">content_copy</span></button>
+</div>
+</div>
+<div>
+<label class="block font-body-sm text-body-sm text-muted mb-1">密码</label>
+<div class="flex items-center gap-2 group">
+<input class="flex-1 bg-surface-variant border-none rounded-DEFAULT px-3 py-2 font-code-md text-code-md text-on-surface focus:ring-1 focus:ring-primary-container focus:shadow-[0_0_0_2px_rgba(88,166,255,0.2)] outline-none cursor-default" readonly="" type="password" value="supersecretpassword123!"/>
+<button class="p-2 text-muted hover:text-primary-container transition-colors"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
+<button class="p-2 text-muted hover:text-primary-container opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[18px]">content_copy</span></button>
+</div>
+<div class="mt-2 flex gap-1 h-1.5 w-full">
+<div class="flex-1 bg-[#3FB950] rounded-l-full"></div>
+<div class="flex-1 bg-[#3FB950]"></div>
+<div class="flex-1 bg-[#3FB950]"></div>
+<div class="flex-1 bg-[#3FB950] rounded-r-full"></div>
+</div>
+<div class="mt-1 font-body-sm text-body-sm text-[#3FB950] text-right">强</div>
+</div>
+<div>
+<label class="block font-body-sm text-body-sm text-muted mb-1">网站</label>
+<div class="flex items-center gap-2 group">
+<a class="flex-1 bg-surface-variant border-none rounded-DEFAULT px-3 py-2 font-body-md text-body-md text-primary-container hover:underline truncate" href="#">https://discord.com/login</a>
+<button class="p-2 text-muted hover:text-primary-container opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[18px]">open_in_new</span></button>
+</div>
+</div>
+<div class="pt-4 border-t border-outline-variant">
+<label class="block font-body-sm text-body-sm text-muted mb-2">笔记</label>
+<div class="bg-surface-variant rounded-DEFAULT p-3 font-body-md text-body-md text-on-surface-variant min-h-[100px]">
+                            备份码已保存在本地加密文档中。
+                        </div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+<!-- Clipboard Toast -->
+<div class="fixed bottom-lg left-1/2 -translate-x-1/2 w-full max-w-[600px] h-[36px] bg-[#1C2128] hairline-border rounded-DEFAULT flex items-center justify-between px-md shadow-lg z-50">
+<div class="flex items-center gap-2 text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-muted">content_copy</span>
+<span class="font-body-md text-body-md">已复制「密码」，剪贴板将在 28 秒后清空</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-code-md text-code-md text-muted w-6 text-right">28</span>
+<div class="w-[1px] h-4 bg-[#30363D]"></div>
+<button class="font-body-sm text-body-sm font-semibold text-primary-container hover:text-primary transition-colors">
+                立即清空
+            </button>
+</div>
+</div>
+</body></html>

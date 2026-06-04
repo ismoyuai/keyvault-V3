@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<!-- CANONICAL: 紧急擦除二次确认（Future）。见 PROTOTYPE-PROMPTS Future -->
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeyVault - 紧急擦除</title>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#0D1117",
+                      "on-primary-container": "#003a6b",
+                      "on-primary-fixed": "#001c38",
+                      "tertiary-container": "#da9600",
+                      "on-tertiary-fixed": "#281800",
+                      "on-secondary-container": "#00320a",
+                      "secondary-fixed": "#83fc89",
+                      "surface-variant": "#2d363e",
+                      "surface-container-low": "#161B22",
+                      "on-primary-fixed-variant": "#004882",
+                      "secondary": "#67df70",
+                      "on-tertiary-container": "#4f3400",
+                      "inverse-surface": "#dae3ee",
+                      "surface-bright": "#313a43",
+                      "background": "#0D1117",
+                      "secondary-container": "#27a640",
+                      "inverse-on-surface": "#29313a",
+                      "on-error": "#690005",
+                      "error-container": "#93000a",
+                      "on-tertiary-fixed-variant": "#614000",
+                      "on-tertiary": "#432c00",
+                      "secondary-fixed-dim": "#67df70",
+                      "surface": "#161B22",
+                      "error": "#ffb4ab",
+                      "outline": "#8b919d",
+                      "surface-container-highest": "#2d363e",
+                      "surface-container-high": "#222b33",
+                      "on-surface": "#dae3ee",
+                      "primary": "#a2c9ff",
+                      "surface-container-lowest": "#060f16",
+                      "primary-container": "#58a6ff",
+                      "on-surface-variant": "#c0c7d4",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary": "#00390d",
+                      "tertiary-fixed-dim": "#ffba42",
+                      "inverse-primary": "#0060aa",
+                      "on-secondary-fixed": "#002105",
+                      "outline-variant": "#30363D",
+                      "tertiary": "#ffba42",
+                      "on-primary": "#00315c",
+                      "on-secondary-fixed-variant": "#005317",
+                      "on-background": "#dae3ee",
+                      "surface-container": "#1C2128",
+                      "primary-fixed-dim": "#a2c9ff",
+                      "primary-fixed": "#d3e4ff",
+                      "tertiary-fixed": "#ffddaf",
+                      "surface-tint": "#a2c9ff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "sm": "8px",
+                      "md": "16px",
+                      "base": "4px",
+                      "xs": "4px",
+                      "sidebar-width": "260px",
+                      "lg": "24px",
+                      "xl": "40px",
+                      "detail-panel-width": "400px"
+              },
+              "fontFamily": {
+                      "label-caps": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "code-md": ["JetBrains Mono"],
+                      "body-sm": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "body-md": ["Inter"]
+              },
+              "fontSize": {
+                      "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                      "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                      "code-md": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                      "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                      "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                      "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d363e; /* surface-variant */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #414752; /* outline-variant */
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface h-screen w-screen flex items-center justify-center overflow-hidden font-body-md selection:bg-primary-container/30">
+<!-- App Window Container (Simulating 1200x800 desktop view) -->
+<div class="relative w-full max-w-[1200px] h-[800px] bg-background border border-outline-variant shadow-2xl overflow-hidden flex items-center justify-center">
+<!-- Simulated Unlock Background Layer -->
+<div class="absolute inset-0 flex flex-col items-center justify-center bg-background z-0">
+<div class="flex items-center gap-sm mb-xl opacity-40">
+<span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">security</span>
+<h1 class="font-headline-lg text-headline-lg text-primary tracking-tight">KeyVault</h1>
+</div>
+<div class="w-full max-w-sm flex flex-col gap-md opacity-20">
+<div class="h-10 border border-outline-variant rounded bg-surface w-full"></div>
+<div class="h-10 bg-primary-container rounded w-full"></div>
+</div>
+</div>
+<!-- Blur Overlay Overlay -->
+<div class="absolute inset-0 bg-background/70 backdrop-blur-md z-10"></div>
+<!-- Modal Container -->
+<div class="relative z-20 w-full max-w-[440px] bg-surface-container-high border border-outline-variant rounded-xl shadow-[0_16px_40px_-8px_rgba(0,0,0,0.6)] flex flex-col p-lg transform transition-all">
+<!-- Header Section -->
+<div class="flex items-start gap-md mb-md">
+<div class="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-error-container/20 rounded-full border border-error-container/30">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div class="flex flex-col gap-xs pt-1">
+<h2 class="font-headline-md text-headline-md text-error">紧急擦除所有数据？</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">此操作将永久删除本地所有加密库数据，且不可通过任何手段恢复。</p>
+</div>
+</div>
+<!-- Form Section -->
+<div class="flex flex-col gap-lg mt-sm">
+<!-- Field 1: Master Password -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider" for="master-password">验证身份以继续</label>
+<div class="relative flex items-center w-full">
+<span class="material-symbols-outlined absolute left-sm text-outline-variant pointer-events-none text-[18px]">lock</span>
+<input autocomplete="off" class="w-full bg-surface border border-outline-variant rounded h-10 pl-[36px] pr-xl font-code-md text-code-md text-on-surface placeholder:text-outline-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:shadow-[0_0_0_2px_rgba(88,166,255,0.2)] transition-all" id="master-password" placeholder="主密码" type="password"/>
+<button aria-label="Toggle password visibility" class="absolute right-sm text-outline-variant hover:text-on-surface transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+</div>
+<!-- Field 2: Confirmation Text -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider" for="confirm-text">确认意图</label>
+<div class="relative flex items-center w-full">
+<span class="material-symbols-outlined absolute left-sm text-error/70 pointer-events-none text-[18px]">keyboard</span>
+<input autocomplete="off" class="w-full bg-surface border border-outline-variant rounded h-10 pl-[36px] pr-sm font-code-md text-code-md text-on-surface placeholder:text-outline-variant focus:outline-none focus:border-error focus:ring-1 focus:ring-error transition-all" id="confirm-text" placeholder="请输入 DELETE 以确认" type="text"/>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="flex justify-end items-center gap-md mt-xl pt-md border-t border-surface-variant">
+<button class="px-md h-10 rounded font-body-md text-body-md text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors border border-transparent">
+                    取消
+                </button>
+<button class="px-md h-10 rounded font-body-md text-body-md font-medium bg-error text-on-error hover:bg-error/90 active:bg-error-container active:text-on-error-container transition-colors shadow-sm flex items-center gap-sm">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">delete_forever</span>
+                    永久擦除
+                </button>
+</div>
+</div>
+</div>
+<script>
+        // Simple script to handle password visibility toggle purely for visual feedback
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.querySelector('button[aria-label="Toggle password visibility"]');
+            const passwordInput = document.getElementById('master-password');
+            
+            if(toggleBtn && passwordInput) {
+                toggleBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const iconSpan = toggleBtn.querySelector('.material-symbols-outlined');
+                    if (passwordInput.type === 'password') {
+                        passwordInput.type = 'text';
+                        iconSpan.textContent = 'visibility_off';
+                    } else {
+                        passwordInput.type = 'password';
+                        iconSpan.textContent = 'visibility';
+                    }
+                });
+            }
+        });
+    </script>
+</body></html>
