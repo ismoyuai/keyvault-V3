@@ -37,4 +37,8 @@ src-tauri/gen/
 # Superpowers plugin cache
 .superpowers/
 
+# Git worktrees (Superpowers isolated workspaces)
+.worktrees/
+worktrees/
+
 stitch_keyvault.zip
