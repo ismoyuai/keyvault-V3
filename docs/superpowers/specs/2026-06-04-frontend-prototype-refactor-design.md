@@ -1,7 +1,7 @@
 # KeyVault 前端原型对齐重构 — 设计规格
 
 > **日期:** 2026-06-04  
-> **状态:** ✅ 已批准 · **执行中**（Phase 0–5 完成，Phase 6–7 待做）  
+> **状态:** ✅ 已批准 · **已落地**（Phase 0–7 已合并 `master`，2026-06-04）  
 > **实现计划:** [`docs/superpowers/plans/2026-06-04-frontend-prototype-refactor.md`](../plans/2026-06-04-frontend-prototype-refactor.md)  
 > **依据:** `docs/软件界面原型/UNIFIED-SPEC.md`、`README.md`、`REQUIREMENTS-COVERAGE.md`
 
@@ -13,8 +13,8 @@
 |------|------|
 | 设计决策（方案 A 壳层优先） | ✅ 已采纳 |
 | 代码实现位置 | `feature/frontend-prototype-refactor` @ `.worktrees/frontend-prototype-refactor` |
-| 是否已合并 master | ❌ 否 |
-| 整体完成度 | **~85%** |
+| 是否已合并 master | ✅ 是（`master` @ merge commit） |
+| 整体完成度 | **~98%**（v1 前端重构；后端回收站 / 目视 pixel-perfect 除外） |
 
 ### 屏幕实现状态
 
@@ -30,7 +30,7 @@
 | 7 | `modal_delete` | `DeleteConfirmModal.vue` | ✅ |
 | 8 | `keyvault_4` | `PasswordGenerator.vue` | ✅ |
 | 9 | `keyvault_7` | 笔记变体 B | ⏸ 延后（标准三栏） |
-| 10 | `vault_trash` | Vault trash 视图 | ⏳ UI 占位 |
+| 10 | `vault_trash` | Vault trash 视图 | ✅ UI stub（`VaultTrashBanner`） |
 | 11 | `keyvault_2` | `SettingsView.vue` | ✅ |
 | 12 | `modal_change_password` | `ChangePasswordModal.vue` | ✅ |
 | 13 | `component_clipboard_timer` | `ClipboardTimer.vue` | ✅ |
@@ -139,13 +139,13 @@ src/styles/
 | `--sidebar-width` | `260px` | ✅ |
 | `--detail-panel-width` | `400px` | ✅ |
 | `--list-item-height` | `48px` | ✅ |
-| `--accent-blue-dim` / `--shadow-glow` | 旧 rgba | ⏳ 仍引用 `#388bfd`，待 Phase 7 统一 |
+| `--accent-blue-dim` / `--shadow-glow` | `#58A6FF` rgba | ✅ |
 
 ### 4.3 图标策略
 
 - **实现：** Google Material Symbols Outlined（与原型一致）— ✅ `material-symbols.css` + `KvIcon.vue`
 - **封装：** `KvIcon.vue` 接收 `name`、`fill`、`size` — ✅
-- **迁移进度：** 主要 View/业务组件已用 KvIcon；⏳ `VaultView.vue` 仍 import `lucide-vue-next`（`Plus`/`Search`/`Wand2`），Phase 7.1 移除
+- **迁移进度：** 全项目已用 `KvIcon`；`lucide-vue-next` 已移除（Phase 7.1）
 
 ### 4.4 原型对照工作流（每屏固定步骤）
 
@@ -172,7 +172,7 @@ src/styles/
 | 7 | `modal_delete` | `DeleteConfirmModal` | F | ✅ |
 | 8 | `keyvault_4` | `PasswordGenerator.vue` | F | ✅ |
 | 9 | `keyvault_7` | Note 布局（VaultView 分支） | B | ⏸ 延后 |
-| 10 | `vault_trash` | VaultView trash 视图 | A | ⏳ 导航有、数据无 |
+| 10 | `vault_trash` | VaultView trash 视图 | A | ✅ UI stub；数据待 soft-delete API |
 | 11 | `keyvault_2` + 扩展 | `SettingsView.vue` | C | ✅ |
 | 12 | `modal_change_password` | `ChangePasswordModal.vue` | F | ✅ |
 | 13 | `component_clipboard_timer` | `ClipboardTimer.vue` | 组件 | ✅ |
@@ -184,7 +184,7 @@ src/styles/
 
 | 功能 | 设计时状态 | 当前实现 |
 |------|------------|----------|
-| 回收站 | 待确认 soft-delete API | ⏳ **阻塞**：`VaultView` trash 导航已接，过滤器恒返回空列表 |
+| 回收站 | 待确认 soft-delete API | ⏳ **阻塞数据**：UI stub 完成；`matchesNavFilter('trash')` 恒 false |
 | 10 条目类型 | `templates.ts` 已有 | ✅ `EntryTypePicker` + `VISIBLE_ENTRY_TYPES`（9 类，card 隐藏） |
 | HIBP / 剪贴板设置 | 命令已有 | ✅ Settings「安全」Tab 已对接 `security.checkBreach` + `settings` store |
 | 解锁失败锁定 | `auth.rs` 已有 | ✅ `auth.ts` 解析错误文案 + Unlock 双态 UI（倒计时为前端估算） |
@@ -213,8 +213,8 @@ src/styles/
 
 - **设计：** ✅ 已批准（方案 A）
 - **计划：** ✅ [`2026-06-04-frontend-prototype-refactor.md`](../plans/2026-06-04-frontend-prototype-refactor.md)
-- **执行：** Subagent-Driven，Phase 0–5 已在 worktree 落地
-- **待收尾：** Phase 6–7 → `finishing-a-development-branch` → 更新 [`REQUIREMENTS-COVERAGE.md`](../../软件界面原型/REQUIREMENTS-COVERAGE.md) 代码列
+- **执行：** Subagent-Driven，Phase 0–7 已合并 `master`
+- **待收尾（v1 外 / 可选）：** Rust soft-delete · 笔记变体 B · 人工逐屏 `screen.png` sign-off
 
 ### UNIFIED-SPEC §6 自检（实现侧）
 
@@ -226,4 +226,4 @@ src/styles/
 | 敏感字段 JetBrains Mono | ✅ |
 | 中文文案 | ✅ |
 | 模态 blur + 宽度（新建 560 / 删除 420 / 生成器 480 / 命令 600） | ✅ |
-| 逐屏 pixel-perfect 对比 `screen.png` | ⏳ 未正式验收签字 |
+| 逐屏 pixel-perfect 对比 `screen.png` | ⏳ 需 `cargo tauri dev` 人工目视（代码侧 §6 已勾选） |

@@ -20,10 +20,10 @@
 |----|-----|
 | **执行分支** | `feature/frontend-prototype-refactor` |
 | **工作目录** | `.worktrees/frontend-prototype-refactor` |
-| **执行方式** | Subagent-Driven（Phase 0–5 已实现，未提交） |
-| **type-check** | ✅ 通过（worktree） |
-| **cargo test** | ✅ 基线 25 passed（worktree 创建时） |
-| **整体完成度** | **约 95%**（Phase 0–7 代码完成；待 merge master + 目视 sign-off） |
+| **执行方式** | Subagent-Driven + executing-plans 收尾 |
+| **type-check** | ✅ 通过（`master` 合并后） |
+| **cargo test** | ✅ 25 passed（`master` 合并后） |
+| **整体完成度** | **~98%**（v1 前端重构已合并 `master`） |
 
 ### Phase 总览
 
@@ -66,14 +66,14 @@ src/stores/auth.ts             # 解锁失败/锁定状态
 1. **回收站数据**：UI stub 完成；`matchesNavFilter` 在 trash 仍返回 false，待 Rust soft-delete IPC。
 2. **解锁锁定倒计时**：前端根据错误文案估算 5 分钟，刷新后 Pinia 重置（`DONE_WITH_CONCERNS`）。
 3. **笔记布局变体 B**（`keyvault_7` 320px 列表）：未单独实现，笔记走标准三栏。
-4. **主仓库**：变更仅在 worktree，**尚未 merge 到 `master`**。
-5. **目视验收**：未逐屏对比 `screen.png` sign-off。
+4. **目视验收**：未逐屏对比 `screen.png`（建议本地 `npm run tauri dev` 人工签字）。
 
-### 下一步（建议顺序）
+### 下一步（v1 外 / 新计划）
 
-1. `finishing-a-development-branch`：合并 `feature/frontend-prototype-refactor` → `master`
-2. Rust：soft-delete + 回收站列表/恢复/清空 API
-3. 设置页 HIBP 区块（`keyvault_2` 扩展）
+1. **Rust soft-delete**：回收站列表 / 恢复 / 清空 IPC（见设计规格 §6）
+2. **笔记布局变体 B**（`keyvault_7` 320px 列表）— 已明确延后
+3. **设置页 HIBP 原型扩展**：当前 `SettingsView` 已有检测表单；若需对齐 `keyvault_2` 扩展 UI，单独立项
+4. **worktree 清理**（可选）：`git worktree remove .worktrees/frontend-prototype-refactor`
 
 ---
 
@@ -83,7 +83,7 @@ src/stores/auth.ts             # 解锁失败/锁定状态
 
 - [x] **Worktree 已创建** — `d:\keyvault-V3\.worktrees\frontend-prototype-refactor`
 - [x] **基线验证** — `npm run type-check`、`cargo test` 通过
-- [ ] **合并回 master** — 待 Phase 7 验收后
+- [x] **合并回 master** — 2026-06-04（`git merge feature/frontend-prototype-refactor`）
 
 ```powershell
 # 若 .worktrees 未在 .gitignore，先添加并提交
@@ -559,7 +559,21 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 
 - [x] **Step 4:** 更新 `docs/软件界面原型/REQUIREMENTS-COVERAGE.md` 代码列
 
-- [ ] **Step 5:** `finishing-a-development-branch`（合并 master）
+- [x] **Step 5:** `finishing-a-development-branch`（已合并 `master`）
+
+### Task 7.3: UNIFIED-SPEC §6 代码侧验收（2026-06-04）
+
+> 非 pixel-perfect；合并后 `master` 代码审查勾选。
+
+- [x] TopBar 40px + `shield_lock`（`KvTopBar.vue`）
+- [x] 侧栏 260px + border-l-2（`KvSideNav.vue`）
+- [x] 侧栏底部设置/锁定文字链
+- [x] tokens.css 变量，组件无裸 hex
+- [x] 敏感字段 mono（`ItemDetail` secure fields）
+- [x] 中文文案（Setup/Unlock/Vault/Settings/Modals）
+- [x] 布局变体 A/C/D/E/F（笔记变体 B 延后）
+- [x] 模态 blur + 宽度（560/420/480/600）
+- [ ] 逐屏对照 `screen.png`（需人工 `tauri dev`）
 
 ---
 
@@ -577,4 +591,4 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 - [x] 回收站 UI stub（数据流依赖后端 soft-delete）
 - [x] 移除 Lucide 依赖
 - [ ] 逐屏目视对比 `screen.png`（未正式 sign-off）
-- [ ] 合并 `feature/frontend-prototype-refactor` → `master`
+- [x] 合并 `feature/frontend-prototype-refactor` → `master`

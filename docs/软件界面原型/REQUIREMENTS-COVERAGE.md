@@ -32,7 +32,7 @@
 | **密码库** | 回收站 | `vault_trash` | `VaultView` trash stub + `VaultTrashBanner` | Should | **UI stub**（无 Rust soft-delete） |
 | **密码库** | 空状态 | `empty_states` | `VaultEmptyState.vue` | Should | **Done** |
 | **安全工具** | 剪贴板倒计时 | `component_clipboard_timer` | `ClipboardTimer.vue` | Should | **Done** |
-| **安全工具** | HIBP 泄露检测 | `keyvault_2` 扩展 | `SettingsView.vue` | Should | 待扩展 |
+| **安全工具** | HIBP 泄露检测 | `keyvault_2` 扩展 | `SettingsView.vue` + `BreachBadge` | Should | **Done**（原型扩展 UI 可选） |
 | **账户** | 紧急擦除 | `modal_emergency_wipe` | 无 | Future | **Done**（原型） |
 | **账户** | 恢复密钥 Setup | `_2` 归档 | 无 | Future | 不做 v1 |
 
@@ -66,7 +66,7 @@
 | Should 原型 | **基本齐**（设置页 HIBP/剪贴板下拉待扩展） |
 | Vue 重构启动 | **可启动** |
 
-**结论:** 桌面端 Must/Should 原型已在 worktree `feature/frontend-prototype-refactor` 对齐实现；回收站为 UI stub（永久删除 + 待 soft-delete API）；剩余为 HIBP 设置扩展、笔记变体 B、合并 master。
+**结论:** 桌面端 Must/Should 原型已在 `master` 对齐实现（2026-06-04 合并）；回收站为 UI stub（待 soft-delete API）；剩余为笔记变体 B、人工 `screen.png` sign-off、Rust 回收站 API。
 
 ---
 
