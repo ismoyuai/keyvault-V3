@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import './styles/base.css'
+import '@/styles/material-symbols.css'
 
 const app = createApp(App)
 

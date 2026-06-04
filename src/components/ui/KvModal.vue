@@ -5,9 +5,13 @@ interface Props {
   open: boolean
   title?: string
   width?: string
+  /** UNIFIED-SPEC §2.5：模态遮罩 blur */
+  blur?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  blur: false,
+})
 
 const emit = defineEmits<{
   close: []
@@ -33,7 +37,12 @@ onUnmounted(() => {
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="open" class="kv-modal-overlay" @click.self="emit('close')">
+      <div
+        v-if="open"
+        class="kv-modal-overlay"
+        :class="{ 'kv-modal-overlay--blur': blur }"
+        @click.self="emit('close')"
+      >
         <div class="kv-modal" :style="{ maxWidth: width || '480px' }">
           <div v-if="title || $slots.header" class="kv-modal-header">
             <slot name="header">
@@ -61,12 +70,16 @@ onUnmounted(() => {
 .kv-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: var(--z-modal);
   padding: var(--space-5);
+}
+
+.kv-modal-overlay--blur {
+  backdrop-filter: blur(8px);
 }
 
 .kv-modal {

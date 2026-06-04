@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 import KvButton from '@/components/ui/KvButton.vue'
 import KvInput from '@/components/ui/KvInput.vue'
 import KvModal from '@/components/ui/KvModal.vue'
-import { TEMPLATES, TEMPLATE_LIST } from '@/constants/templates'
-import { useVaultStore } from '@/stores/vault'
+import EntryTypePicker from '@/components/vault/EntryTypePicker.vue'
+import KvIcon from '@/components/icons/KvIcon.vue'
+import { TEMPLATES } from '@/constants/templates'
 import { useToast } from '@/composables/useToast'
 import { usePasswordGenerator } from '@/composables/usePasswordGen'
 import { vault as vaultBridge } from '@/bridge/tauri'
@@ -24,7 +25,6 @@ const emit = defineEmits<{
   saved: []
 }>()
 
-const vault = useVaultStore()
 const toast = useToast()
 const passwordGen = usePasswordGenerator()
 const step = ref<'type' | 'form'>(props.editEntry ? 'form' : 'type')
@@ -33,8 +33,6 @@ const title = ref(props.editEntry?.title || '')
 const subtitle = ref(props.editEntry?.subtitle || '')
 const tags = ref(props.editEntry?.tags.join(', ') || '')
 const fields = ref<FieldInput[]>([])
-
-const template = computed(() => TEMPLATES[selectedType.value])
 
 watch(() => props.open, (isOpen) => {
   if (isOpen) {
@@ -106,8 +104,9 @@ async function handleSave() {
     emit('saved')
     emit('close')
     resetForm()
-  } catch (e: any) {
-    toast.error(e.message || '保存失败')
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : '保存失败'
+    toast.error(message)
   }
 }
 
@@ -117,28 +116,20 @@ function resetForm() {
   subtitle.value = ''
   tags.value = ''
   fields.value = []
+  selectedType.value = 'login'
 }
 </script>
 
 <template>
-  <KvModal :open="open" @close="emit('close')">
+  <KvModal :open="open" width="560px" blur @close="emit('close')">
     <template #header>
-      <h3 class="form-title">{{ editEntry ? '编辑条目' : '新建条目' }}</h3>
+      <h3 class="form-title">
+        {{ editEntry ? '编辑条目' : step === 'type' ? '新建条目' : `新建 · ${TEMPLATES[selectedType].name}` }}
+      </h3>
     </template>
 
-    <!-- Step 1: 选择类型 -->
-    <div v-if="step === 'type'" class="type-grid">
-      <button
-        v-for="tpl in TEMPLATE_LIST"
-        :key="tpl.id"
-        class="type-card"
-        @click="selectType(tpl.id)"
-      >
-        <span class="type-card__name">{{ tpl.name }}</span>
-      </button>
-    </div>
+    <EntryTypePicker v-if="step === 'type'" @select="selectType" />
 
-    <!-- Step 2: 填写表单 -->
     <div v-else class="form-body">
       <KvInput
         v-model="title"
@@ -154,7 +145,7 @@ function resetForm() {
       <div class="fields-section">
         <div class="fields-header">
           <span class="fields-label">字段</span>
-          <button class="add-field-btn" @click="addCustomField">+ 添加字段</button>
+          <button type="button" class="add-field-btn" @click="addCustomField">+ 添加字段</button>
         </div>
 
         <div
@@ -182,18 +173,15 @@ function resetForm() {
           />
           <button
             v-if="field.fieldType === 'password'"
-            class="generate-btn"
+            type="button"
+            class="icon-btn"
             title="生成密码"
             @click="field.value = passwordGen.generate()"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
-            </svg>
+            <KvIcon name="autorenew" :size="16" />
           </button>
-          <button class="remove-field-btn" @click="removeField(i)">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+          <button type="button" class="icon-btn icon-btn--danger" @click="removeField(i)">
+            <KvIcon name="close" :size="16" />
           </button>
         </div>
       </div>
@@ -226,33 +214,6 @@ function resetForm() {
 .form-title {
   font-size: var(--text-md);
   font-weight: 600;
-}
-
-.type-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-2);
-}
-
-.type-card {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  background: var(--bg-input);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  transition: all var(--duration-fast);
-}
-
-.type-card:hover {
-  border-color: var(--accent-blue);
-  background: var(--accent-blue-glow);
-}
-
-.type-card__name {
-  font-size: var(--text-sm);
-  color: var(--text-primary);
 }
 
 .form-body {
@@ -324,26 +285,19 @@ function resetForm() {
   color: var(--text-primary);
 }
 
-.generate-btn {
+.icon-btn {
   padding: var(--space-1);
   color: var(--text-tertiary);
   border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
 
-.generate-btn:hover {
+.icon-btn:hover {
   color: var(--accent-blue);
   background: var(--bg-elevated);
 }
 
-.remove-field-btn {
-  padding: var(--space-1);
-  color: var(--text-tertiary);
-  border-radius: var(--radius-sm);
-}
-
-.remove-field-btn:hover {
+.icon-btn--danger:hover {
   color: var(--color-danger);
-  background: var(--bg-elevated);
 }
 </style>

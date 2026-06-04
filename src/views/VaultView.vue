@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useDebounceFn, useVirtualList } from '@vueuse/core'
 import { useRouter } from 'vue-router'
-import { Plus, Lock, Settings, Star, Clock, Key, Search, Wand2 } from 'lucide-vue-next'
 import { useVaultStore } from '@/stores/vault'
 import { useUiStore } from '@/stores/ui'
 import { useShortcuts } from '@/composables/useShortcuts'
@@ -10,14 +9,19 @@ import { useAutoLock } from '@/composables/useAutoLock'
 import { useClipboard } from '@/composables/useClipboard'
 import { useToast } from '@/composables/useToast'
 import { useSettingsStore } from '@/stores/settings'
-import { window as windowBridge } from '@/bridge/tauri'
+import KvAppLayout from '@/components/shell/KvAppLayout.vue'
+import type { SideNavId } from '@/components/shell/KvSideNav.vue'
 import VaultItem from '@/components/vault/VaultItem.vue'
+import VaultEmptyState from '@/components/vault/VaultEmptyState.vue'
+import VaultTrashBanner from '@/components/vault/VaultTrashBanner.vue'
+import KvIcon from '@/components/icons/KvIcon.vue'
 import ItemDetail from '@/components/vault/ItemDetail.vue'
 import ItemForm from '@/components/vault/ItemForm.vue'
 import CommandPalette from '@/components/search/CommandPalette.vue'
 import PasswordGenerator from '@/components/generator/PasswordGenerator.vue'
 import ClipboardTimer from '@/components/security/ClipboardTimer.vue'
 import KvModal from '@/components/ui/KvModal.vue'
+import DeleteConfirmModal from '@/components/vault/DeleteConfirmModal.vue'
 import KvToast from '@/components/ui/KvToast.vue'
 import type { EntryMeta } from '@/types/vault'
 
@@ -32,8 +36,10 @@ const toast = useToast()
 const selectedEntry = ref<EntryMeta | null>(null)
 const formOpen = ref(false)
 const editEntry = ref<EntryMeta | null>(null)
-const activeView = ref<'all' | 'favorites' | 'recent'>('all')
+const activeNav = ref<SideNavId>('all')
 const showGenerator = ref(false)
+const deleteTarget = ref<EntryMeta | null>(null)
+const deleteModalOpen = ref(false)
 
 onMounted(() => {
   vault.loadEntries()
@@ -44,6 +50,11 @@ useShortcuts([
   { key: 'l', ctrl: true, handler: () => lock() },
   { key: 'n', ctrl: true, handler: () => { formOpen.value = true; editEntry.value = null } },
 ])
+
+function openNewEntry() {
+  formOpen.value = true
+  editEntry.value = null
+}
 
 function selectEntry(entry: EntryMeta) {
   selectedEntry.value = entry
@@ -56,7 +67,14 @@ function handleCopy(entry: EntryMeta) {
   toast.success('已复制标题')
 }
 
-async function handleDelete(entry: EntryMeta) {
+function requestDelete(entry: EntryMeta) {
+  deleteTarget.value = entry
+  deleteModalOpen.value = true
+}
+
+async function confirmDelete() {
+  const entry = deleteTarget.value
+  if (!entry) return
   try {
     await vault.deleteEntry(entry.id)
     if (selectedEntry.value?.id === entry.id) {
@@ -64,8 +82,11 @@ async function handleDelete(entry: EntryMeta) {
       ui.closeDetailPanel()
     }
     toast.success('条目已删除')
-  } catch (e: any) {
-    toast.error(e.message || '删除失败')
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : '删除失败'
+    toast.error(message)
+  } finally {
+    deleteTarget.value = null
   }
 }
 
@@ -88,159 +109,163 @@ const debouncedSearch = useDebounceFn((query: string) => {
   vault.search(query)
 }, 300)
 
-const favoritesCount = computed(() => vault.entries.filter(e => e.favorited).length)
+function matchesNavFilter(entry: EntryMeta, nav: SideNavId): boolean {
+  switch (nav) {
+    case 'favorites':
+      return entry.favorited
+    case 'passwords':
+      return entry.entryType !== 'api_key' && entry.entryType !== 'note'
+    case 'api-keys':
+      return entry.entryType === 'api_key'
+    case 'notes':
+      return entry.entryType === 'note'
+    case 'trash':
+      // Blocker: 无 Rust soft-delete；回收站仅 UI stub
+      return false
+    default:
+      return true
+  }
+}
 
-const filteredEntries = computed(() => {
-  if (activeView.value === 'favorites') return vault.entries.filter(e => e.favorited)
-  if (activeView.value === 'recent') return vault.entries.slice(0, 20)
-  return vault.entries
+const filteredEntries = computed(() =>
+  vault.entries.filter(e => matchesNavFilter(e, activeNav.value)),
+)
+
+const isTrashNav = computed(() => activeNav.value === 'trash')
+
+const trashCount = computed(() => 0)
+
+const emptyVariant = computed(() => {
+  if (isTrashNav.value) return 'trash-empty' as const
+  if (vault.searchQuery.trim()) return 'no-search' as const
+  return 'no-items' as const
+})
+
+function clearSearch() {
+  vault.search('')
+}
+
+watch(activeNav, (nav) => {
+  if (nav === 'trash') {
+    selectedEntry.value = null
+    ui.closeDetailPanel()
+    if (vault.searchQuery.trim()) {
+      vault.search('')
+    }
+  }
 })
 
 // 虚拟滚动
-const ITEM_HEIGHT = 52
+const ITEM_HEIGHT = 48
 const { list: virtualList, containerProps, wrapperProps } = useVirtualList(
   filteredEntries,
   {
     itemHeight: ITEM_HEIGHT,
     overscan: 5,
-  }
+  },
 )
 </script>
 
 <template>
-  <div class="vault-layout">
-    <!-- 标题栏 -->
-    <header class="titlebar" data-tauri-drag-region>
-      <div class="titlebar-drag" data-tauri-drag-region>
-        <span class="titlebar-title">KeyVault</span>
-      </div>
-      <div class="titlebar-controls">
-        <button class="titlebar-btn" title="最小化" @click="windowBridge.minimize()">
-          <svg width="12" height="12" viewBox="0 0 12 12"><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.2"/></svg>
-        </button>
-        <button class="titlebar-btn" title="最大化" @click="windowBridge.maximize()">
-          <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
-        </button>
-        <button class="titlebar-btn titlebar-btn--close" title="关闭" @click="windowBridge.close()">
-          <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.2"/></svg>
-        </button>
-      </div>
-    </header>
+  <div class="vault-view">
+    <KvAppLayout
+      :active-nav="activeNav"
+      class="vault-shell"
+      @new-entry="openNewEntry"
+      @settings="router.push('/settings')"
+      @lock="lock()"
+      @navigate="activeNav = $event"
+    >
+      <div class="vault-pane">
+        <main class="entry-list">
+          <div v-if="isTrashNav" class="list-title-row">
+            <h1 class="list-title">
+              回收站
+              <span class="list-title-badge">{{ trashCount }}</span>
+            </h1>
+            <div class="search-wrapper search-wrapper--trash">
+              <KvIcon name="search" :size="18" class="search-icon" />
+              <input
+                type="text"
+                class="search-input"
+                placeholder="搜索已删除项..."
+                disabled
+                aria-disabled="true"
+                title="软删除 API 尚未接入"
+              />
+            </div>
+          </div>
 
-    <div class="vault-body">
-      <!-- 侧边栏 -->
-      <aside class="sidebar">
-        <nav class="sidebar-nav">
-          <button
-            class="nav-item"
-            :class="{ active: activeView === 'all' }"
-            @click="activeView = 'all'"
-          >
-            <Key :size="15" />
-            <span class="nav-label">全部</span>
-            <span class="nav-count">{{ vault.entries.length }}</span>
-          </button>
-          <button
-            class="nav-item"
-            :class="{ active: activeView === 'favorites' }"
-            @click="activeView = 'favorites'"
-          >
-            <Star :size="15" />
-            <span class="nav-label">收藏</span>
-            <span class="nav-count">{{ favoritesCount }}</span>
-          </button>
-          <button
-            class="nav-item"
-            :class="{ active: activeView === 'recent' }"
-            @click="activeView = 'recent'"
-          >
-            <Clock :size="15" />
-            <span class="nav-label">最近</span>
-          </button>
-        </nav>
+          <div v-else class="list-header">
+            <div class="search-wrapper">
+              <KvIcon name="search" :size="14" class="search-icon" />
+              <input
+                v-model="vault.searchQuery"
+                type="text"
+                placeholder="搜索条目..."
+                class="search-input"
+                @input="debouncedSearch(vault.searchQuery)"
+              />
+            </div>
+            <ClipboardTimer :seconds="settings.clipboardClearSeconds" />
+            <button
+              class="add-btn"
+              title="密码生成器"
+              @click="showGenerator = true"
+            >
+              <KvIcon name="auto_awesome" :size="16" />
+            </button>
+            <button
+              class="add-btn"
+              title="新建条目 (Ctrl+N)"
+              @click="openNewEntry"
+            >
+              <KvIcon name="add" :size="16" />
+            </button>
+          </div>
 
-        <div class="sidebar-footer">
-          <button class="nav-item" @click="router.push('/settings')">
-            <Settings :size="15" />
-            <span class="nav-label">设置</span>
-          </button>
-          <button class="nav-item" @click="lock">
-            <Lock :size="15" />
-            <span class="nav-label">锁定</span>
-          </button>
-        </div>
-      </aside>
+          <VaultTrashBanner v-if="isTrashNav" />
 
-      <!-- 条目列表 -->
-      <main class="entry-list">
-        <div class="list-header">
-          <div class="search-wrapper">
-            <Search :size="14" class="search-icon" />
-            <input
-              v-model="vault.searchQuery"
-              type="text"
-              placeholder="搜索条目..."
-              class="search-input"
-              @input="debouncedSearch(vault.searchQuery)"
+          <div v-bind="containerProps" class="list-body">
+            <div v-bind="wrapperProps">
+              <VaultItem
+                v-for="item in virtualList"
+                :key="item.data.id"
+                :entry="item.data"
+                :selected="selectedEntry?.id === item.data.id"
+                @select="selectEntry(item.data)"
+                @copy="handleCopy(item.data)"
+                @toggle-favorite="vault.toggleFavorite(item.data.id)"
+              />
+            </div>
+
+            <VaultEmptyState
+              v-if="!vault.isLoading && filteredEntries.length === 0"
+              :variant="emptyVariant"
+              :search-query="vault.searchQuery"
+              @create="openNewEntry"
+              @clear-search="clearSearch"
             />
           </div>
-          <ClipboardTimer :seconds="settings.clipboardClearSeconds" />
-          <button
-            class="add-btn"
-            title="密码生成器"
-            @click="showGenerator = true"
-          >
-            <Wand2 :size="16" />
-          </button>
-          <button
-            class="add-btn"
-            title="新建条目 (Ctrl+N)"
-            @click="formOpen = true; editEntry = null"
-          >
-            <Plus :size="16" />
-          </button>
-        </div>
+        </main>
 
-        <div v-bind="containerProps" class="list-body">
-          <div v-bind="wrapperProps">
-            <VaultItem
-              v-for="item in virtualList"
-              :key="item.data.id"
-              :entry="item.data"
-              :selected="selectedEntry?.id === item.data.id"
-              @select="selectEntry(item.data)"
-              @copy="handleCopy(item.data)"
-              @toggle-favorite="vault.toggleFavorite(item.data.id)"
-            />
-          </div>
+        <ItemDetail
+          v-if="ui.detailPanelOpen && selectedEntry"
+          :entry="selectedEntry"
+          @close="ui.closeDetailPanel(); selectedEntry = null"
+          @edit="handleEdit"
+          @delete="requestDelete"
+        />
+      </div>
+    </KvAppLayout>
 
-          <div v-if="!vault.isLoading && filteredEntries.length === 0" class="empty-state">
-            <Key :size="32" class="empty-icon" />
-            <p class="empty-title">暂无条目</p>
-            <p class="empty-hint">按 Ctrl+N 新建</p>
-          </div>
-        </div>
-      </main>
-
-      <!-- 详情面板 -->
-      <ItemDetail
-        v-if="ui.detailPanelOpen && selectedEntry"
-        :entry="selectedEntry"
-        @close="ui.closeDetailPanel(); selectedEntry = null"
-        @edit="handleEdit"
-        @delete="handleDelete"
-      />
-    </div>
-
-    <!-- 命令面板 -->
     <CommandPalette
       :open="ui.commandPaletteOpen"
       @close="ui.commandPaletteOpen = false"
       @select-entry="selectEntry"
-      @new-entry="formOpen = true; editEntry = null"
+      @new-entry="openNewEntry"
     />
 
-    <!-- 新建/编辑表单 -->
     <ItemForm
       :open="formOpen"
       :edit-entry="editEntry"
@@ -248,16 +273,23 @@ const { list: virtualList, containerProps, wrapperProps } = useVirtualList(
       @saved="handleSaved"
     />
 
-    <!-- 密码生成器 -->
+    <DeleteConfirmModal
+      :open="deleteModalOpen"
+      :entry="deleteTarget"
+      @close="deleteModalOpen = false; deleteTarget = null"
+      @confirm="confirmDelete"
+    />
+
     <KvModal
       :open="showGenerator"
       title="密码生成器"
+      width="480px"
+      blur
       @close="showGenerator = false"
     >
       <PasswordGenerator @select="handleGeneratedPassword" />
     </KvModal>
 
-    <!-- Toast 容器 -->
     <div class="toast-container">
       <KvToast
         v-for="t in toast.toasts.value"
@@ -272,133 +304,66 @@ const { list: virtualList, containerProps, wrapperProps } = useVirtualList(
 </template>
 
 <style scoped>
-.vault-layout {
+.vault-view {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  overflow: hidden;
   background: var(--bg-base);
 }
 
-/* 标题栏 */
-.titlebar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: var(--titlebar-height);
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
-  -webkit-app-region: drag;
-  flex-shrink: 0;
-}
-
-.titlebar-drag {
+.vault-shell {
   flex: 1;
-  padding-left: var(--space-4);
-  display: flex;
-  align-items: center;
+  min-height: 0;
 }
 
-.titlebar-title {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  font-weight: 500;
-  letter-spacing: 0.05em;
-}
-
-.titlebar-controls {
-  display: flex;
-  -webkit-app-region: no-drag;
-}
-
-.titlebar-btn {
-  width: 46px;
-  height: var(--titlebar-height);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  transition: background var(--duration-fast);
-}
-
-.titlebar-btn:hover {
-  background: var(--bg-elevated);
-}
-
-.titlebar-btn--close:hover {
-  background: var(--color-danger);
-  color: #fff;
-}
-
-/* 主体 */
-.vault-body {
+.vault-pane {
   display: flex;
   flex: 1;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
-/* 侧边栏 */
-.sidebar {
-  width: var(--sidebar-width);
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-}
-
-.sidebar-nav {
-  flex: 1;
-  padding: var(--space-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  transition: all var(--duration-fast);
-}
-
-.nav-item:hover {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
-
-.nav-item.active {
-  background: var(--accent-blue-dim);
-  color: var(--text-accent);
-}
-
-.nav-label {
-  flex: 1;
-}
-
-.nav-count {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-}
-
-.sidebar-footer {
-  padding: var(--space-2);
-  border-top: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-/* 条目列表 */
 .entry-list {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+.list-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  height: 64px;
+  padding: 0 var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.list-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.list-title-badge {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--bg-input);
+  color: var(--text-secondary);
 }
 
 .list-header {
@@ -408,6 +373,15 @@ const { list: virtualList, containerProps, wrapperProps } = useVirtualList(
   padding: var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
+}
+
+.search-wrapper--trash {
+  flex: 0 1 256px;
+  opacity: 0.7;
+}
+
+.search-wrapper--trash .search-input:disabled {
+  cursor: not-allowed;
 }
 
 .search-wrapper {
@@ -468,31 +442,6 @@ const { list: virtualList, containerProps, wrapperProps } = useVirtualList(
   padding: var(--space-2);
 }
 
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 240px;
-  gap: var(--space-2);
-}
-
-.empty-icon {
-  color: var(--text-disabled);
-  margin-bottom: var(--space-2);
-}
-
-.empty-title {
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-}
-
-.empty-hint {
-  font-size: var(--text-xs);
-  color: var(--text-disabled);
-}
-
-/* Toast 容器 */
 .toast-container {
   position: fixed;
   bottom: var(--space-5);

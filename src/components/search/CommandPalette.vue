@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { Search, Plus, Lock, Settings, Key, Star, Clock } from 'lucide-vue-next'
+import KvIcon from '@/components/icons/KvIcon.vue'
 import { useVaultStore } from '@/stores/vault'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
@@ -30,7 +30,7 @@ interface CommandItem {
   id: string
   label: string
   shortcut?: string
-  icon: typeof Key
+  icon: string
   action: () => void
 }
 
@@ -38,15 +38,15 @@ const commands: CommandItem[] = [
   {
     id: 'new',
     label: '新建条目',
-    shortcut: '⌘N',
-    icon: Plus,
+    shortcut: 'Ctrl+N',
+    icon: 'add',
     action: () => { emit('newEntry'); emit('close') },
   },
   {
     id: 'lock',
-    label: '锁定',
-    shortcut: '⌘L',
-    icon: Lock,
+    label: '锁定密码库',
+    shortcut: 'Ctrl+L',
+    icon: 'lock',
     action: async () => {
       await auth.lock()
       router.push('/login')
@@ -55,8 +55,9 @@ const commands: CommandItem[] = [
   },
   {
     id: 'settings',
-    label: '设置',
-    icon: Settings,
+    label: '打开设置',
+    shortcut: ',',
+    icon: 'settings',
     action: () => {
       router.push('/settings')
       emit('close')
@@ -65,13 +66,13 @@ const commands: CommandItem[] = [
 ]
 
 const filteredEntries = computed(() => {
-  if (!query.value.trim()) return vault.entries.slice(0, 10)
+  if (!query.value.trim()) return vault.entries.slice(0, 8)
   const q = query.value.toLowerCase()
   return vault.entries
     .filter(e =>
       e.title.toLowerCase().includes(q) ||
       e.subtitle?.toLowerCase().includes(q) ||
-      e.tags.some(t => t.toLowerCase().includes(q))
+      e.tags.some(t => t.toLowerCase().includes(q)),
     )
     .slice(0, 10)
 })
@@ -82,17 +83,29 @@ const filteredCommands = computed(() => {
   return commands.filter(c => c.label.toLowerCase().includes(q))
 })
 
-const allItems = computed(() => {
-  if (mode.value === 'command') return filteredCommands.value.map(c => ({ type: 'command' as const, data: c }))
-  return [
-    ...filteredEntries.value.map(e => ({ type: 'entry' as const, data: e })),
-  ]
+type PaletteRow =
+  | { kind: 'entry'; data: EntryMeta }
+  | { kind: 'command'; data: CommandItem }
+
+const flatRows = computed((): PaletteRow[] => {
+  if (mode.value === 'command') {
+    return filteredCommands.value.map(c => ({ kind: 'command' as const, data: c }))
+  }
+  const rows: PaletteRow[] = filteredEntries.value.map(e => ({ kind: 'entry' as const, data: e }))
+  if (!query.value.trim()) {
+    for (const c of filteredCommands.value) {
+      rows.push({ kind: 'command', data: c })
+    }
+  }
+  return rows
 })
 
 watch(() => query.value, (val) => {
-  mode.value = val.startsWith('>') ? 'command' : 'search'
-  if (mode.value === 'command') {
+  if (val.startsWith('>')) {
+    mode.value = 'command'
     query.value = val.slice(1).trimStart()
+  } else {
+    mode.value = 'search'
   }
   selectedIndex.value = 0
 })
@@ -106,22 +119,29 @@ watch(() => props.open, (isOpen) => {
   }
 })
 
+function executeRow(row: PaletteRow) {
+  if (row.kind === 'command') {
+    row.data.action()
+  } else {
+    emit('selectEntry', row.data)
+    emit('close')
+  }
+}
+
 function handleKeydown(e: KeyboardEvent) {
-  const items = allItems.value
+  const rows = flatRows.value
   switch (e.key) {
     case 'ArrowDown':
       e.preventDefault()
-      selectedIndex.value = (selectedIndex.value + 1) % Math.max(items.length, 1)
+      selectedIndex.value = (selectedIndex.value + 1) % Math.max(rows.length, 1)
       break
     case 'ArrowUp':
       e.preventDefault()
-      selectedIndex.value = (selectedIndex.value - 1 + items.length) % Math.max(items.length, 1)
+      selectedIndex.value = (selectedIndex.value - 1 + rows.length) % Math.max(rows.length, 1)
       break
     case 'Enter':
       e.preventDefault()
-      if (items[selectedIndex.value]) {
-        executeItem(items[selectedIndex.value])
-      }
+      if (rows[selectedIndex.value]) executeRow(rows[selectedIndex.value])
       break
     case 'Escape':
       emit('close')
@@ -129,15 +149,13 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
-function executeItem(item: { type: 'command' | 'entry'; data: any }) {
-  if (item.type === 'command') {
-    item.data.action()
-  } else {
-    emit('selectEntry', item.data)
-    emit('close')
-  }
+function sectionForIndex(index: number): 'entries' | 'commands' | null {
+  if (mode.value === 'command') return 'commands'
+  const entryCount = filteredEntries.value.length
+  if (index < entryCount) return 'entries'
+  if (index < flatRows.value.length) return 'commands'
+  return null
 }
-
 </script>
 
 <template>
@@ -146,63 +164,58 @@ function executeItem(item: { type: 'command' | 'entry'; data: any }) {
       <div v-if="open" class="palette-overlay" @click.self="emit('close')">
         <div class="palette">
           <div class="palette-input-wrapper">
-            <Search :size="16" class="palette-search-icon" />
+            <KvIcon name="search" :size="18" class="palette-search-icon" />
             <input
               ref="inputRef"
               v-model="query"
               class="palette-input"
-              :placeholder="mode === 'command' ? '输入命令...' : '搜索条目或输入 > 进入命令模式...'"
+              :placeholder="mode === 'command' ? '输入命令…' : '搜索条目，或输入 > 进入命令模式'"
               @keydown="handleKeydown"
             />
           </div>
 
           <div class="palette-results">
-            <!-- 命令模式 -->
-            <template v-if="mode === 'command'">
-              <div class="palette-section-title">命令</div>
-              <div
-                v-for="(cmd, i) in filteredCommands"
-                :key="cmd.id"
-                class="palette-item"
-                :class="{ 'palette-item--selected': selectedIndex === i }"
-                @click="cmd.action()"
-                @mouseenter="selectedIndex = i"
-              >
-                <component :is="cmd.icon" :size="14" class="palette-item-icon" />
-                <span class="palette-item-label">{{ cmd.label }}</span>
-                <span v-if="cmd.shortcut" class="palette-item-shortcut">{{ cmd.shortcut }}</span>
-              </div>
+            <template v-if="flatRows.length === 0">
+              <div class="palette-empty">无匹配结果</div>
             </template>
-
-            <!-- 搜索模式 -->
             <template v-else>
-              <div v-if="filteredEntries.length > 0" class="palette-section-title">
-                {{ query ? '搜索结果' : '最近使用' }}
-              </div>
-              <div
-                v-for="(entry, i) in filteredEntries"
-                :key="entry.id"
-                class="palette-item"
-                :class="{ 'palette-item--selected': selectedIndex === i }"
-                @click="emit('selectEntry', entry); emit('close')"
-                @mouseenter="selectedIndex = i"
-              >
-                <div class="palette-item-icon entry-type-dot" />
-                <div class="palette-item-info">
-                  <span class="palette-item-label">{{ entry.title }}</span>
-                  <span v-if="entry.subtitle" class="palette-item-sub">{{ entry.subtitle }}</span>
+              <template v-for="(row, i) in flatRows" :key="row.kind === 'entry' ? row.data.id : row.data.id + '-cmd'">
+                <div
+                  v-if="i === 0 || sectionForIndex(i) !== sectionForIndex(i - 1)"
+                  class="palette-section-title"
+                >
+                  {{
+                    sectionForIndex(i) === 'entries'
+                      ? (query ? '搜索结果' : '最近条目')
+                      : '常用命令'
+                  }}
                 </div>
-              </div>
-
-              <div v-if="filteredEntries.length === 0 && query" class="palette-empty">
-                无匹配结果
-              </div>
+                <div
+                  class="palette-item"
+                  :class="{ 'palette-item--selected': selectedIndex === i }"
+                  @click="executeRow(row)"
+                  @mouseenter="selectedIndex = i"
+                >
+                  <template v-if="row.kind === 'entry'">
+                    <span class="palette-entry-dot" />
+                    <div class="palette-item-info">
+                      <span class="palette-item-label">{{ row.data.title }}</span>
+                      <span v-if="row.data.subtitle" class="palette-item-sub">{{ row.data.subtitle }}</span>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <KvIcon :name="row.data.icon" :size="18" class="palette-item-icon" />
+                    <span class="palette-item-label">{{ row.data.label }}</span>
+                    <span v-if="row.data.shortcut" class="palette-item-shortcut">{{ row.data.shortcut }}</span>
+                  </template>
+                </div>
+              </template>
             </template>
           </div>
 
           <div class="palette-footer">
             <span class="palette-hint">
-              <kbd>&uarr;&darr;</kbd> 导航
+              <kbd>↑↓</kbd> 导航
               <kbd>Enter</kbd> 选择
               <kbd>Esc</kbd> 关闭
             </span>
@@ -217,23 +230,26 @@ function executeItem(item: { type: 'command' | 'entry'; data: any }) {
 .palette-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
-  padding-top: 15vh;
+  padding-top: 12vh;
   z-index: var(--z-palette);
 }
 
 .palette {
-  width: 520px;
+  width: 100%;
+  max-width: 600px;
   max-height: 420px;
-  background: var(--bg-surface);
+  background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin: 0 var(--space-4);
 }
 
 .palette-input-wrapper {
@@ -288,7 +304,7 @@ function executeItem(item: { type: 'command' | 'entry'; data: any }) {
 
 .palette-item:hover,
 .palette-item--selected {
-  background: var(--bg-elevated);
+  background: var(--bg-surface);
 }
 
 .palette-item-icon {
@@ -296,11 +312,12 @@ function executeItem(item: { type: 'command' | 'entry'; data: any }) {
   flex-shrink: 0;
 }
 
-.entry-type-dot {
+.palette-entry-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--accent-blue);
+  flex-shrink: 0;
 }
 
 .palette-item-info {
@@ -325,6 +342,7 @@ function executeItem(item: { type: 'command' | 'entry'; data: any }) {
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .palette-empty {
@@ -359,7 +377,6 @@ function executeItem(item: { type: 'command' | 'entry'; data: any }) {
   font-size: 10px;
 }
 
-/* Transitions */
 .palette-enter-active {
   transition: opacity var(--duration-base) var(--ease-out-quart);
 }

@@ -5,11 +5,60 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { auth as authBridge, setSessionToken, clearSessionToken } from '@/bridge/tauri'
 
+const MAX_UNLOCK_ATTEMPTS = 5
+const LOCKOUT_DURATION_MS = 5 * 60 * 1000
+
+function parseUnlockErrorMessage(message: string): {
+  failureCount: number
+  locked: boolean
+} | null {
+  const lockedMatch = message.match(/密码错误次数过多（(\d+)次），请5分钟后重试/)
+  if (lockedMatch) {
+    return {
+      failureCount: Number.parseInt(lockedMatch[1], 10),
+      locked: true,
+    }
+  }
+  const failMatch = message.match(/密码错误（已失败(\d+)次/)
+  if (failMatch) {
+    const failureCount = Number.parseInt(failMatch[1], 10)
+    return {
+      failureCount,
+      locked: failureCount >= MAX_UNLOCK_ATTEMPTS,
+    }
+  }
+  return null
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const isUnlocked = ref(false)
   const isInitialized = ref(false)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const unlockFailureCount = ref(0)
+  const isLockedOut = ref(false)
+  const lockoutEndsAt = ref<number | null>(null)
+
+  const remainingAttempts = computed(() =>
+    Math.max(0, MAX_UNLOCK_ATTEMPTS - unlockFailureCount.value),
+  )
+
+  function resetUnlockLockout() {
+    unlockFailureCount.value = 0
+    isLockedOut.value = false
+    lockoutEndsAt.value = null
+  }
+
+  function applyUnlockError(message: string) {
+    const parsed = parseUnlockErrorMessage(message)
+    if (parsed) {
+      unlockFailureCount.value = parsed.failureCount
+      if (parsed.locked) {
+        isLockedOut.value = true
+        lockoutEndsAt.value = Date.now() + LOCKOUT_DURATION_MS
+      }
+    }
+  }
 
   async function checkInitialized() {
     try {
@@ -37,15 +86,22 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function unlock(password: string): Promise<boolean> {
+    if (isLockedOut.value) {
+      error.value = `密码错误次数过多（${unlockFailureCount.value}次），请5分钟后重试`
+      return false
+    }
     isLoading.value = true
     error.value = null
     try {
       const token = await authBridge.unlock(password)
       setSessionToken(token)
       isUnlocked.value = true
+      resetUnlockLockout()
       return true
     } catch (e: any) {
-      error.value = e.message || '密码错误'
+      const message = e.message || '密码错误'
+      error.value = message
+      applyUnlockError(message)
       return false
     } finally {
       isLoading.value = false
@@ -60,6 +116,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
     clearSessionToken()
     isUnlocked.value = false
+    resetUnlockLockout()
   }
 
   async function changePassword(oldPassword: string, newPassword: string) {
@@ -71,6 +128,11 @@ export const useAuthStore = defineStore('auth', () => {
     isInitialized,
     isLoading,
     error,
+    unlockFailureCount,
+    isLockedOut,
+    lockoutEndsAt,
+    remainingAttempts,
+    resetUnlockLockout,
     checkInitialized,
     setup,
     unlock,

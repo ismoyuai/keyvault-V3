@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onUnmounted, watch } from 'vue'
+import KvIcon from '@/components/icons/KvIcon.vue'
 import { useClipboard } from '@/composables/useClipboard'
 
 const props = defineProps<{
@@ -42,12 +43,9 @@ defineExpose({ start, stop, remaining })
 </script>
 
 <template>
-  <div v-if="remaining > 0" class="clipboard-timer">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="10"/>
-      <polyline points="12 6 12 12 16 14"/>
-    </svg>
-    <span>{{ remaining }}s</span>
+  <div v-if="remaining > 0" class="clipboard-timer" role="status">
+    <KvIcon name="schedule" :size="14" />
+    <span class="clipboard-timer-text">剪贴板将在 <strong>{{ remaining }}</strong> 秒后清空</span>
   </div>
 </template>
 
@@ -55,9 +53,18 @@ defineExpose({ start, stop, remaining })
 .clipboard-timer {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  color: var(--text-tertiary);
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: var(--accent-blue-dim);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  color: var(--text-accent);
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
+}
+
+.clipboard-timer-text strong {
+  font-weight: 700;
+  color: var(--text-primary);
 }
 </style>
