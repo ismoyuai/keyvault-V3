@@ -11,7 +11,7 @@ cd d:\keyvault-V3
 npm run tauri dev
 ```
 
-对照 `docs/软件界面原型/<目录>/screen.png`（若仅有 `code.html` 则对照 HTML 布局）。
+对照 `docs/软件界面原型/screens/<分类>/<名>/screen.png` 与 `code.html`。
 
 ## UNIFIED-SPEC §6 全局
 

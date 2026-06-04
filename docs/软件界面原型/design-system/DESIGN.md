@@ -1,6 +1,6 @@
 ---
 name: KeyVault
-# Canonical tokens — aligned with UNIFIED-SPEC.md & _shared/tailwind-extend.json (2026-06-04)
+# Canonical tokens — aligned with src/design/tokens.css (2026-06-04)
 colors:
   surface: '#161b22'
   surface-dim: '#0d1117'
@@ -105,7 +105,7 @@ spacing:
   titlebar-height: 40px
 ---
 
-> **壳层与原型对照：** 见 [../UNIFIED-SPEC.md](../UNIFIED-SPEC.md) · [../README.md](../README.md)
+> **壳层与原型对照：** 见 [../README.md](../README.md) · `src/design/tokens.css`
 
 ## Brand & Style
 The design system is engineered for a local-first password manager, prioritizing a sense of absolute security, technical precision, and high-velocity utility. The aesthetic is rooted in **Modern Minimalism** with a **Technical** edge, drawing inspiration from developer tools where information density is a feature, not a flaw.
