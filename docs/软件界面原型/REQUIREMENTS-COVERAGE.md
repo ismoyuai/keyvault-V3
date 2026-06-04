@@ -29,7 +29,7 @@
 | **密码库** | 10 种条目类型 | `keyvault_1` 仅表单 | `EntryTypePicker.vue`（card 隐藏） | Must | **Done**（v1 网格） |
 | **密码库** | 通用详情 | `entry_detail_generic` | `ItemDetail.vue` | Must | **Done** |
 | **密码库** | 删除确认 | `modal_delete` | `DeleteConfirmModal.vue` | Must | **Done** |
-| **密码库** | 回收站 | `vault_trash` | `VaultView` trash stub + `VaultTrashBanner` | Should | **UI stub**（无 Rust soft-delete） |
+| **密码库** | 回收站 | `vault_trash` | `VaultView` + soft-delete IPC | Should | **Done** |
 | **密码库** | 空状态 | `empty_states` | `VaultEmptyState.vue` | Should | **Done** |
 | **安全工具** | 剪贴板倒计时 | `component_clipboard_timer` | `ClipboardTimer.vue` | Should | **Done** |
 | **安全工具** | HIBP 泄露检测 | `keyvault_2` 扩展 | `SettingsView.vue` + `BreachBadge` | Should | **Done**（原型扩展 UI 可选） |
@@ -66,7 +66,7 @@
 | Should 原型 | **基本齐**（设置页 HIBP/剪贴板下拉待扩展） |
 | Vue 重构启动 | **可启动** |
 
-**结论:** 桌面端 Must/Should 原型已在 `master` 对齐实现（2026-06-04 合并）；回收站为 UI stub（待 soft-delete API）；剩余为笔记变体 B、人工 `screen.png` sign-off、Rust 回收站 API。
+**结论:** 桌面端 Must/Should 已在 `master` 对齐；回收站 soft-delete 已接入。剩余：笔记变体 B、人工 `screen.png` sign-off。
 
 ---
 

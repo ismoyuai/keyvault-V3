@@ -6,7 +6,7 @@ import KvIcon from '@/components/icons/KvIcon.vue'
   <div class="trash-banner" role="status">
     <KvIcon name="info" :size="18" class="trash-banner__icon" />
     <p class="trash-banner__text">
-      软删除 API 尚未接入。当前删除为<strong>永久删除</strong>；回收站列表与恢复功能将在后续版本启用。
+      已删除条目保留 <strong>30 天</strong>，之后自动永久销毁。可恢复至密码库，或从回收站永久删除。
     </p>
   </div>
 </template>

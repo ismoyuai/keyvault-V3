@@ -1,3 +1,5 @@
+use serde::Serialize;
+use std::sync::atomic::Ordering;
 use tauri::State;
 
 use crate::crypto::kdf;
@@ -12,6 +14,33 @@ macro_rules! audit_log {
     ($db:expr, $action:expr) => {
         audit_log!($db, $action, None, None, None);
     };
+}
+
+#[derive(Serialize)]
+pub struct UnlockStatus {
+    #[serde(rename = "failureCount")]
+    pub failure_count: u32,
+    pub locked: bool,
+    #[serde(rename = "secondsRemaining")]
+    pub seconds_remaining: u64,
+}
+
+#[tauri::command]
+pub async fn get_unlock_status(state: State<'_, AppState>) -> Result<UnlockStatus, String> {
+    let failures = state.unlock_failures.load(Ordering::SeqCst);
+    let locked = state.is_unlock_locked();
+    let seconds_remaining = if locked {
+        let last = state.last_failure_time.load(Ordering::SeqCst);
+        let elapsed = chrono::Utc::now().timestamp() - last;
+        (300 - elapsed).max(0) as u64
+    } else {
+        0
+    };
+    Ok(UnlockStatus {
+        failure_count: failures,
+        locked,
+        seconds_remaining,
+    })
 }
 
 #[tauri::command]

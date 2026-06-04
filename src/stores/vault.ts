@@ -12,8 +12,10 @@ export const useVaultStore = defineStore('vault', () => {
   const selectedId = ref<string | null>(null)
   const isLoading = ref(false)
   const searchQuery = ref('')
+  const isTrashView = ref(false)
 
   async function loadEntries() {
+    isTrashView.value = false
     isLoading.value = true
     try {
       entries.value = await vaultBridge.listEntries()
@@ -24,8 +26,35 @@ export const useVaultStore = defineStore('vault', () => {
     }
   }
 
+  async function loadTrashEntries() {
+    isTrashView.value = true
+    searchQuery.value = ''
+    isLoading.value = true
+    try {
+      entries.value = await vaultBridge.listTrashEntries()
+    } catch {
+      entries.value = []
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function search(query: string) {
     searchQuery.value = query
+    if (isTrashView.value) {
+      if (!query.trim()) {
+        await loadTrashEntries()
+        return
+      }
+      const q = query.trim().toLowerCase()
+      const all = await vaultBridge.listTrashEntries()
+      entries.value = all.filter(
+        e =>
+          e.title.toLowerCase().includes(q)
+          || (e.subtitle?.toLowerCase().includes(q) ?? false),
+      )
+      return
+    }
     if (!query.trim()) {
       await loadEntries()
       return
@@ -52,6 +81,25 @@ export const useVaultStore = defineStore('vault', () => {
     if (selectedId.value === entryId) selectedId.value = null
   }
 
+  async function restoreEntry(entryId: string) {
+    await vaultBridge.restoreEntry(entryId)
+    entries.value = entries.value.filter(e => e.id !== entryId)
+    if (selectedId.value === entryId) selectedId.value = null
+  }
+
+  async function purgeEntry(entryId: string) {
+    await vaultBridge.purgeEntry(entryId)
+    entries.value = entries.value.filter(e => e.id !== entryId)
+    if (selectedId.value === entryId) selectedId.value = null
+  }
+
+  async function emptyTrash(): Promise<number> {
+    const count = await vaultBridge.emptyTrash()
+    entries.value = []
+    selectedId.value = null
+    return count
+  }
+
   function selectEntry(id: string | null) {
     selectedId.value = id
   }
@@ -61,10 +109,15 @@ export const useVaultStore = defineStore('vault', () => {
     selectedId,
     isLoading,
     searchQuery,
+    isTrashView,
     loadEntries,
+    loadTrashEntries,
     search,
     toggleFavorite,
     deleteEntry,
+    restoreEntry,
+    purgeEntry,
+    emptyTrash,
     selectEntry,
   }
 })

@@ -35,6 +35,8 @@ export interface EntryMeta {
   favorited: boolean
   groupId?: string
   updatedAt: number
+  /** 回收站条目：软删除时间戳（秒） */
+  deletedAt?: number
 }
 
 // ============================================

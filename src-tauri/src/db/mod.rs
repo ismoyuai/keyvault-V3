@@ -20,5 +20,22 @@ pub async fn init_db(db_path: &str) -> Result<SqlitePool, sqlx::Error> {
         .execute(&pool)
         .await?;
 
+    // 003: 软删除列（幂等，避免重复 ALTER 失败）
+    let has_deleted_at: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM pragma_table_info('entries') WHERE name = 'deleted_at'",
+    )
+    .fetch_one(&pool)
+    .await?;
+    if has_deleted_at == 0 {
+        sqlx::query("ALTER TABLE entries ADD COLUMN deleted_at INTEGER")
+            .execute(&pool)
+            .await?;
+    }
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_entries_deleted_at ON entries(deleted_at)",
+    )
+    .execute(&pool)
+    .await?;
+
     Ok(pool)
 }

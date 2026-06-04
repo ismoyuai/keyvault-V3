@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted, withDefaults } from 'vue'
 import { vault as vaultBridge } from '@/bridge/tauri'
 import { useClipboard } from '@/composables/useClipboard'
 import { useToast } from '@/composables/useToast'
@@ -9,14 +9,17 @@ import type { DecryptedField, EntryMeta, EntrySecrets } from '@/types/vault'
 
 interface Props {
   entry: EntryMeta | null
+  trashMode?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { trashMode: false })
 
 const emit = defineEmits<{
   close: []
   edit: [entry: EntryMeta]
   delete: [entry: EntryMeta]
+  restore: [entry: EntryMeta]
+  purge: [entry: EntryMeta]
 }>()
 
 const FIELD_LABELS: Record<string, string> = {
@@ -205,14 +208,26 @@ onUnmounted(() => {
       </div>
 
       <div class="detail-actions">
-        <button type="button" class="action-btn" @click="emit('edit', entry)">
-          <KvIcon name="edit" :size="16" />
-          <span>编辑</span>
-        </button>
-        <button type="button" class="action-btn action-btn--danger" @click="emit('delete', entry)">
-          <KvIcon name="delete" :size="16" />
-          <span>删除</span>
-        </button>
+        <template v-if="trashMode">
+          <button type="button" class="action-btn" @click="emit('restore', entry)">
+            <KvIcon name="restore" :size="16" />
+            <span>恢复</span>
+          </button>
+          <button type="button" class="action-btn action-btn--danger" @click="emit('purge', entry)">
+            <KvIcon name="delete_forever" :size="16" />
+            <span>永久删除</span>
+          </button>
+        </template>
+        <template v-else>
+          <button type="button" class="action-btn" @click="emit('edit', entry)">
+            <KvIcon name="edit" :size="16" />
+            <span>编辑</span>
+          </button>
+          <button type="button" class="action-btn action-btn--danger" @click="emit('delete', entry)">
+            <KvIcon name="delete" :size="16" />
+            <span>删除</span>
+          </button>
+        </template>
       </div>
     </div>
 

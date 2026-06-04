@@ -60,9 +60,34 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function applyUnlockStatus(status: {
+    failureCount: number
+    locked: boolean
+    secondsRemaining: number
+  }) {
+    unlockFailureCount.value = status.failureCount
+    if (status.locked && status.secondsRemaining > 0) {
+      isLockedOut.value = true
+      lockoutEndsAt.value = Date.now() + status.secondsRemaining * 1000
+      error.value = `密码错误次数过多（${status.failureCount}次），请5分钟后重试`
+    } else if (!status.locked) {
+      if (isLockedOut.value) resetUnlockLockout()
+    }
+  }
+
+  async function syncUnlockStatus() {
+    try {
+      const status = await authBridge.getUnlockStatus()
+      applyUnlockStatus(status)
+    } catch {
+      // 应用未就绪时忽略
+    }
+  }
+
   async function checkInitialized() {
     try {
       isInitialized.value = await authBridge.isInitialized()
+      await syncUnlockStatus()
     } catch {
       isInitialized.value = false
     }
@@ -133,6 +158,7 @@ export const useAuthStore = defineStore('auth', () => {
     lockoutEndsAt,
     remainingAttempts,
     resetUnlockLockout,
+    syncUnlockStatus,
     checkInitialized,
     setup,
     unlock,

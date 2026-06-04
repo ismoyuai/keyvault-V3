@@ -13,6 +13,9 @@ macro_rules! audit_log {
     ($db:expr, $action:expr, $entry_id:expr) => {
         audit_log!($db, $action, $entry_id, None, None);
     };
+    ($db:expr, $action:expr) => {
+        audit_log!($db, $action, None, None, None);
+    };
 }
 
 #[derive(Serialize)]
@@ -28,6 +31,8 @@ pub struct EntryMeta {
     pub group_id: Option<String>,
     #[serde(rename = "updatedAt")]
     pub updated_at: i64,
+    #[serde(rename = "deletedAt", skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -87,6 +92,7 @@ fn row_to_meta(
         favorited: row.favorited != 0,
         group_id: row.group_id,
         updated_at: row.updated_at,
+        deleted_at: row.deleted_at,
     }
 }
 
@@ -345,7 +351,7 @@ pub async fn update_entry(
     Ok(())
 }
 
-/// 删除条目
+/// 软删除条目（移至回收站）
 #[tauri::command]
 pub async fn delete_entry(
     session_token: String,
@@ -356,19 +362,106 @@ pub async fn delete_entry(
         return Err("会话已过期".to_string());
     }
 
-    sqlx::query("DELETE FROM entries WHERE id = ?")
-        .bind(&entry_id)
-        .execute(&state.db)
+    let now = chrono::Utc::now().timestamp();
+    queries::soft_delete_entry(&state.db, &entry_id, now)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
             "操作失败，请重试".to_string()
         })?;
 
-    // 审计日志：删除条目
-    audit_log!(&state.db, "delete", Some(&entry_id));
+    audit_log!(&state.db, "soft_delete", Some(&entry_id));
 
     Ok(())
+}
+
+/// 回收站列表
+#[tauri::command]
+pub async fn list_trash_entries(
+    session_token: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<EntryMeta>, String> {
+    if !state.sessions.validate(&session_token).await {
+        return Err("会话已过期".to_string());
+    }
+
+    let rows = queries::list_trash_entries(&state.db, 200)
+        .await
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
+
+    Ok(rows.into_iter().map(row_to_meta).collect())
+}
+
+/// 从回收站恢复条目
+#[tauri::command]
+pub async fn restore_entry(
+    session_token: String,
+    entry_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    if !state.sessions.validate(&session_token).await {
+        return Err("会话已过期".to_string());
+    }
+
+    let now = chrono::Utc::now().timestamp();
+    queries::restore_entry(&state.db, &entry_id, now)
+        .await
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
+
+    audit_log!(&state.db, "restore", Some(&entry_id));
+
+    Ok(())
+}
+
+/// 永久删除回收站中的条目
+#[tauri::command]
+pub async fn purge_entry(
+    session_token: String,
+    entry_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    if !state.sessions.validate(&session_token).await {
+        return Err("会话已过期".to_string());
+    }
+
+    queries::purge_entry(&state.db, &entry_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
+
+    audit_log!(&state.db, "purge", Some(&entry_id));
+
+    Ok(())
+}
+
+/// 清空回收站
+#[tauri::command]
+pub async fn empty_trash(
+    session_token: String,
+    state: State<'_, AppState>,
+) -> Result<u64, String> {
+    if !state.sessions.validate(&session_token).await {
+        return Err("会话已过期".to_string());
+    }
+
+    let count = queries::empty_trash(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
+
+    audit_log!(&state.db, "empty_trash");
+
+    Ok(count)
 }
 
 /// 切换收藏状态
@@ -382,8 +475,10 @@ pub async fn toggle_favorite(
         return Err("会话已过期".to_string());
     }
 
-    sqlx::query("UPDATE entries SET favorited = CASE WHEN favorited = 1 THEN 0 ELSE 1 END WHERE id = ?")
-        .bind(&entry_id)
+    sqlx::query(
+        "UPDATE entries SET favorited = CASE WHEN favorited = 1 THEN 0 ELSE 1 END WHERE id = ? AND deleted_at IS NULL",
+    )
+    .bind(&entry_id)
         .execute(&state.db)
         .await
         .map_err(|e| {

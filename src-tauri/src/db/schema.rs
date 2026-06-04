@@ -11,6 +11,7 @@ pub struct EntryMeta {
     pub favorited: i32,
     pub group_id: Option<String>,
     pub updated_at: i64,
+    pub deleted_at: Option<i64>,
 }
 
 /// 加密字段行

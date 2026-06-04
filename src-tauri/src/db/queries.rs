@@ -6,12 +6,16 @@ use super::schema::{EntryMeta, FieldRow, GroupRow};
 // 条目查询
 // ============================================
 
+const ENTRY_META_COLS: &str =
+    "id, entry_type, title, subtitle, tags, favorited, group_id, updated_at, deleted_at";
+
 pub async fn list_entries(pool: &SqlitePool, limit: i64, offset: i64) -> Result<Vec<EntryMeta>, sqlx::Error> {
-    sqlx::query_as::<_, EntryMeta>(
-        "SELECT id, entry_type, title, subtitle, tags, favorited, group_id, updated_at
-         FROM entries ORDER BY favorited DESC, updated_at DESC
+    sqlx::query_as::<_, EntryMeta>(&format!(
+        "SELECT {ENTRY_META_COLS}
+         FROM entries WHERE deleted_at IS NULL
+         ORDER BY favorited DESC, updated_at DESC
          LIMIT ? OFFSET ?",
-    )
+    ))
     .bind(limit)
     .bind(offset)
     .fetch_all(pool)
@@ -22,12 +26,13 @@ pub async fn search_entries(pool: &SqlitePool, query: &str) -> Result<Vec<EntryM
     // 转义 LIKE 通配符
     let escaped = query.replace('%', "\\%").replace('_', "\\_");
     let pattern = format!("%{}%", escaped);
-    sqlx::query_as::<_, EntryMeta>(
-        "SELECT id, entry_type, title, subtitle, tags, favorited, group_id, updated_at
+    sqlx::query_as::<_, EntryMeta>(&format!(
+        "SELECT {ENTRY_META_COLS}
          FROM entries
-         WHERE title LIKE ?1 ESCAPE '\\' OR subtitle LIKE ?1 ESCAPE '\\' OR tags LIKE ?1 ESCAPE '\\'
+         WHERE deleted_at IS NULL
+           AND (title LIKE ?1 ESCAPE '\\' OR subtitle LIKE ?1 ESCAPE '\\' OR tags LIKE ?1 ESCAPE '\\')
          ORDER BY favorited DESC, updated_at DESC",
-    )
+    ))
     .bind(&pattern)
     .fetch_all(pool)
     .await
@@ -45,11 +50,74 @@ pub async fn get_entry_fields(pool: &SqlitePool, entry_id: &str) -> Result<Vec<F
 
 pub async fn entry_exists(pool: &SqlitePool, entry_id: &str) -> Result<bool, sqlx::Error> {
     let result: Option<(String,)> =
-        sqlx::query_as("SELECT id FROM entries WHERE id = ?")
+        sqlx::query_as("SELECT id FROM entries WHERE id = ? AND deleted_at IS NULL")
             .bind(entry_id)
             .fetch_optional(pool)
             .await?;
     Ok(result.is_some())
+}
+
+/// 回收站保留天数
+pub const TRASH_RETENTION_SECS: i64 = 30 * 24 * 60 * 60;
+
+pub async fn purge_expired_trash(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let cutoff = chrono::Utc::now().timestamp() - TRASH_RETENTION_SECS;
+    sqlx::query("DELETE FROM entries WHERE deleted_at IS NOT NULL AND deleted_at < ?")
+        .bind(cutoff)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn list_trash_entries(pool: &SqlitePool, limit: i64) -> Result<Vec<EntryMeta>, sqlx::Error> {
+    purge_expired_trash(pool).await?;
+    sqlx::query_as::<_, EntryMeta>(&format!(
+        "SELECT {ENTRY_META_COLS}
+         FROM entries WHERE deleted_at IS NOT NULL
+         ORDER BY deleted_at DESC
+         LIMIT ?",
+    ))
+    .bind(limit)
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn soft_delete_entry(pool: &SqlitePool, entry_id: &str, deleted_at: i64) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE entries SET deleted_at = ?, favorited = 0, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+    )
+    .bind(deleted_at)
+    .bind(deleted_at)
+    .bind(entry_id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+pub async fn restore_entry(pool: &SqlitePool, entry_id: &str, restored_at: i64) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE entries SET deleted_at = NULL, updated_at = ? WHERE id = ? AND deleted_at IS NOT NULL",
+    )
+    .bind(restored_at)
+    .bind(entry_id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+pub async fn purge_entry(pool: &SqlitePool, entry_id: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM entries WHERE id = ? AND deleted_at IS NOT NULL")
+        .bind(entry_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn empty_trash(pool: &SqlitePool) -> Result<u64, sqlx::Error> {
+    let result = sqlx::query("DELETE FROM entries WHERE deleted_at IS NOT NULL")
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected())
 }
 
 // ============================================

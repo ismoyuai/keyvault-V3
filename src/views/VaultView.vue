@@ -40,6 +40,8 @@ const activeNav = ref<SideNavId>('all')
 const showGenerator = ref(false)
 const deleteTarget = ref<EntryMeta | null>(null)
 const deleteModalOpen = ref(false)
+const deleteModalMode = ref<'soft-delete' | 'permanent'>('soft-delete')
+const emptyTrashModalOpen = ref(false)
 
 onMounted(() => {
   vault.loadEntries()
@@ -69,6 +71,7 @@ function handleCopy(entry: EntryMeta) {
 
 function requestDelete(entry: EntryMeta) {
   deleteTarget.value = entry
+  deleteModalMode.value = 'soft-delete'
   deleteModalOpen.value = true
 }
 
@@ -81,7 +84,7 @@ async function confirmDelete() {
       selectedEntry.value = null
       ui.closeDetailPanel()
     }
-    toast.success('条目已删除')
+    toast.success('已移至回收站')
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : '删除失败'
     toast.error(message)
@@ -120,10 +123,9 @@ function matchesNavFilter(entry: EntryMeta, nav: SideNavId): boolean {
     case 'notes':
       return entry.entryType === 'note'
     case 'trash':
-      // Blocker: 无 Rust soft-delete；回收站仅 UI stub
-      return false
+      return vault.isTrashView
     default:
-      return true
+      return !vault.isTrashView
   }
 }
 
@@ -133,7 +135,9 @@ const filteredEntries = computed(() =>
 
 const isTrashNav = computed(() => activeNav.value === 'trash')
 
-const trashCount = computed(() => 0)
+const trashCount = computed(() =>
+  isTrashNav.value ? filteredEntries.value.length : 0,
+)
 
 const emptyVariant = computed(() => {
   if (isTrashNav.value) return 'trash-empty' as const
@@ -145,15 +149,86 @@ function clearSearch() {
   vault.search('')
 }
 
-watch(activeNav, (nav) => {
+async function reloadForNav(nav: SideNavId) {
   if (nav === 'trash') {
+    await vault.loadTrashEntries()
+  } else {
+    await vault.loadEntries()
+  }
+}
+
+watch(activeNav, async (nav) => {
+  selectedEntry.value = null
+  ui.closeDetailPanel()
+  await reloadForNav(nav)
+})
+
+async function handleRestore(entry: EntryMeta) {
+  try {
+    await vault.restoreEntry(entry.id)
+    if (selectedEntry.value?.id === entry.id) {
+      selectedEntry.value = null
+      ui.closeDetailPanel()
+    }
+    toast.success('已恢复至密码库')
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : '恢复失败'
+    toast.error(message)
+  }
+}
+
+function requestPurge(entry: EntryMeta) {
+  deleteTarget.value = entry
+  deleteModalMode.value = 'permanent'
+  deleteModalOpen.value = true
+}
+
+async function confirmPurge() {
+  const entry = deleteTarget.value
+  if (!entry) return
+  try {
+    await vault.purgeEntry(entry.id)
+    if (selectedEntry.value?.id === entry.id) {
+      selectedEntry.value = null
+      ui.closeDetailPanel()
+    }
+    toast.success('已永久删除')
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : '删除失败'
+    toast.error(message)
+  } finally {
+    deleteTarget.value = null
+    deleteModalMode.value = 'soft-delete'
+  }
+}
+
+async function confirmEmptyTrash() {
+  try {
+    const count = await vault.emptyTrash()
     selectedEntry.value = null
     ui.closeDetailPanel()
-    if (vault.searchQuery.trim()) {
-      vault.search('')
-    }
+    toast.success(count > 0 ? `已清空回收站（${count} 项）` : '回收站已为空')
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : '清空失败'
+    toast.error(message)
+  } finally {
+    emptyTrashModalOpen.value = false
   }
-})
+}
+
+function onDeleteModalConfirm() {
+  if (deleteModalMode.value === 'permanent') {
+    confirmPurge()
+  } else {
+    confirmDelete()
+  }
+}
+
+function onDeleteModalClose() {
+  deleteModalOpen.value = false
+  deleteTarget.value = null
+  deleteModalMode.value = 'soft-delete'
+}
 
 // 虚拟滚动
 const ITEM_HEIGHT = 48
@@ -186,14 +261,22 @@ const { list: virtualList, containerProps, wrapperProps } = useVirtualList(
             <div class="search-wrapper search-wrapper--trash">
               <KvIcon name="search" :size="18" class="search-icon" />
               <input
+                v-model="vault.searchQuery"
                 type="text"
                 class="search-input"
                 placeholder="搜索已删除项..."
-                disabled
-                aria-disabled="true"
-                title="软删除 API 尚未接入"
+                @input="debouncedSearch(vault.searchQuery)"
               />
             </div>
+            <button
+              v-if="trashCount > 0"
+              type="button"
+              class="trash-empty-btn"
+              title="清空回收站"
+              @click="emptyTrashModalOpen = true"
+            >
+              清空回收站
+            </button>
           </div>
 
           <div v-else class="list-header">
@@ -252,9 +335,12 @@ const { list: virtualList, containerProps, wrapperProps } = useVirtualList(
         <ItemDetail
           v-if="ui.detailPanelOpen && selectedEntry"
           :entry="selectedEntry"
+          :trash-mode="isTrashNav"
           @close="ui.closeDetailPanel(); selectedEntry = null"
           @edit="handleEdit"
           @delete="requestDelete"
+          @restore="handleRestore"
+          @purge="requestPurge"
         />
       </div>
     </KvAppLayout>
@@ -276,9 +362,30 @@ const { list: virtualList, containerProps, wrapperProps } = useVirtualList(
     <DeleteConfirmModal
       :open="deleteModalOpen"
       :entry="deleteTarget"
-      @close="deleteModalOpen = false; deleteTarget = null"
-      @confirm="confirmDelete"
+      :mode="deleteModalMode"
+      @close="onDeleteModalClose"
+      @confirm="onDeleteModalConfirm"
     />
+
+    <KvModal
+      :open="emptyTrashModalOpen"
+      title="清空回收站"
+      width="420px"
+      blur
+      @close="emptyTrashModalOpen = false"
+    >
+      <p class="empty-trash-text">
+        将永久删除回收站中的全部 {{ trashCount }} 项，此操作不可撤销。
+      </p>
+      <template #footer>
+        <button type="button" class="modal-btn modal-btn--ghost" @click="emptyTrashModalOpen = false">
+          取消
+        </button>
+        <button type="button" class="modal-btn modal-btn--danger" @click="confirmEmptyTrash">
+          清空回收站
+        </button>
+      </template>
+    </KvModal>
 
     <KvModal
       :open="showGenerator"
@@ -377,11 +484,50 @@ const { list: virtualList, containerProps, wrapperProps } = useVirtualList(
 
 .search-wrapper--trash {
   flex: 0 1 256px;
-  opacity: 0.7;
 }
 
-.search-wrapper--trash .search-input:disabled {
-  cursor: not-allowed;
+.trash-empty-btn {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-danger);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  transition: background var(--duration-fast);
+}
+
+.trash-empty-btn:hover {
+  background: rgba(248, 81, 73, 0.1);
+}
+
+.empty-trash-text {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.modal-btn {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+}
+
+.modal-btn--ghost {
+  color: var(--text-secondary);
+}
+
+.modal-btn--ghost:hover {
+  background: var(--bg-elevated);
+}
+
+.modal-btn--danger {
+  color: #fff;
+  background: var(--color-danger);
+}
+
+.modal-btn--danger:hover {
+  opacity: 0.9;
 }
 
 .search-wrapper {

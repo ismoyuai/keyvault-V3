@@ -33,8 +33,15 @@ function getToken(): string {
 // ============================================
 // 认证
 // ============================================
+export interface UnlockStatus {
+  failureCount: number
+  locked: boolean
+  secondsRemaining: number
+}
+
 export const auth = {
   isInitialized: () => invoke<boolean>('is_initialized'),
+  getUnlockStatus: () => invoke<UnlockStatus>('get_unlock_status'),
   setup: (password: string) => invoke<string>('setup', { password }),
   unlock: (password: string) => invoke<string>('unlock', { password }),
   lock: () => invoke<void>('lock'),
@@ -67,6 +74,18 @@ export const vault = {
 
   deleteEntry: (entryId: string) =>
     invoke<void>('delete_entry', { sessionToken: getToken(), entryId }),
+
+  listTrashEntries: () =>
+    invoke<EntryMeta[]>('list_trash_entries', { sessionToken: getToken() }),
+
+  restoreEntry: (entryId: string) =>
+    invoke<void>('restore_entry', { sessionToken: getToken(), entryId }),
+
+  purgeEntry: (entryId: string) =>
+    invoke<void>('purge_entry', { sessionToken: getToken(), entryId }),
+
+  emptyTrash: () =>
+    invoke<number>('empty_trash', { sessionToken: getToken() }),
 
   toggleFavorite: (entryId: string) =>
     invoke<void>('toggle_favorite', { sessionToken: getToken(), entryId }),

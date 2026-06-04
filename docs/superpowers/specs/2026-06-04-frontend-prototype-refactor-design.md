@@ -14,7 +14,7 @@
 | 设计决策（方案 A 壳层优先） | ✅ 已采纳 |
 | 代码实现位置 | `feature/frontend-prototype-refactor` @ `.worktrees/frontend-prototype-refactor` |
 | 是否已合并 master | ✅ 是（`master` @ merge commit） |
-| 整体完成度 | **~98%**（v1 前端重构；后端回收站 / 目视 pixel-perfect 除外） |
+| 整体完成度 | **~99%**（回收站数据流已接入；目视 pixel-perfect 除外） |
 
 ### 屏幕实现状态
 
@@ -30,7 +30,7 @@
 | 7 | `modal_delete` | `DeleteConfirmModal.vue` | ✅ |
 | 8 | `keyvault_4` | `PasswordGenerator.vue` | ✅ |
 | 9 | `keyvault_7` | 笔记变体 B | ⏸ 延后（标准三栏） |
-| 10 | `vault_trash` | Vault trash 视图 | ✅ UI stub（`VaultTrashBanner`） |
+| 10 | `vault_trash` | Vault trash 视图 | ✅ soft-delete + 恢复/清空 |
 | 11 | `keyvault_2` | `SettingsView.vue` | ✅ |
 | 12 | `modal_change_password` | `ChangePasswordModal.vue` | ✅ |
 | 13 | `component_clipboard_timer` | `ClipboardTimer.vue` | ✅ |
@@ -184,7 +184,7 @@ src/styles/
 
 | 功能 | 设计时状态 | 当前实现 |
 |------|------------|----------|
-| 回收站 | 待确认 soft-delete API | ⏳ **阻塞数据**：UI stub 完成；`matchesNavFilter('trash')` 恒 false |
+| 回收站 | soft-delete API | ✅ `deleted_at` + trash IPC |
 | 10 条目类型 | `templates.ts` 已有 | ✅ `EntryTypePicker` + `VISIBLE_ENTRY_TYPES`（9 类，card 隐藏） |
 | HIBP / 剪贴板设置 | 命令已有 | ✅ Settings「安全」Tab 已对接 `security.checkBreach` + `settings` store |
 | 解锁失败锁定 | `auth.rs` 已有 | ✅ `auth.ts` 解析错误文案 + Unlock 双态 UI（倒计时为前端估算） |

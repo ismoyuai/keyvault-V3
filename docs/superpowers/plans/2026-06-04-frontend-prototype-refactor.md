@@ -23,7 +23,7 @@
 | **执行方式** | Subagent-Driven + executing-plans 收尾 |
 | **type-check** | ✅ 通过（`master` 合并后） |
 | **cargo test** | ✅ 25 passed（`master` 合并后） |
-| **整体完成度** | **~98%**（v1 前端重构已合并 `master`） |
+| **整体完成度** | **~99%**（Phase 8 回收站数据流已接入） |
 
 ### Phase 总览
 
@@ -42,7 +42,7 @@
 | 3.7 | CommandPalette | ✅ | 600px blur；条目 + 常用命令分组 |
 | 4 | 生成器 + 剪贴板 | ✅ | 四段强度条；ClipboardTimer 胶囊 |
 | 5 | 设置 | ✅ | `KvSettingsNav` + `ChangePasswordModal` |
-| 6 | 回收站 | ✅ | `VaultTrashBanner` + 标题行 + 空状态；无 Rust soft-delete |
+| 6 | 回收站 | ✅ | soft-delete + 恢复/永久删除/清空；30 天自动清理 |
 | 7 | 清理验收 | ✅ | Lucide 已移除；tokens `#58a6ff`；type-check + cargo test PASS |
 
 ### 新增/主要变更文件（worktree）
@@ -63,17 +63,16 @@ src/stores/auth.ts             # 解锁失败/锁定状态
 
 ### 已知缺口 / 技术债
 
-1. **回收站数据**：UI stub 完成；`matchesNavFilter` 在 trash 仍返回 false，待 Rust soft-delete IPC。
-2. **解锁锁定倒计时**：前端根据错误文案估算 5 分钟，刷新后 Pinia 重置（`DONE_WITH_CONCERNS`）。
+1. **解锁锁定倒计时**：已通过 `get_unlock_status` 与 Unlock 页挂载同步（应用重启后后端计数仍会重置）。
 3. **笔记布局变体 B**（`keyvault_7` 320px 列表）：未单独实现，笔记走标准三栏。
 4. **目视验收**：未逐屏对比 `screen.png`（建议本地 `npm run tauri dev` 人工签字）。
 
 ### 下一步（v1 外 / 新计划）
 
-1. **Rust soft-delete**：回收站列表 / 恢复 / 清空 IPC（见设计规格 §6）
-2. **笔记布局变体 B**（`keyvault_7` 320px 列表）— 已明确延后
-3. **设置页 HIBP 原型扩展**：当前 `SettingsView` 已有检测表单；若需对齐 `keyvault_2` 扩展 UI，单独立项
-4. **worktree 清理**（可选）：`git worktree remove .worktrees/frontend-prototype-refactor`
+1. **笔记布局变体 B**（`keyvault_7` 320px 列表）— 已明确延后
+2. **人工目视验收**：`npm run tauri dev` 对照 `screen.png`
+3. **worktree 清理**（可选）：`git worktree remove .worktrees/frontend-prototype-refactor`
+4. **推送到 GitHub**：`git push origin master`（若本地有未推送提交）
 
 ---
 
@@ -577,6 +576,34 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 
 ---
 
+## Phase 8: 回收站数据流 ✅
+
+> **状态：** 2026-06-04 完成（`master`）
+
+### Task 8.1: Rust soft-delete
+
+**Files:**
+- Modify: `src-tauri/src/db/mod.rs`, `schema.rs`, `queries.rs`
+- Modify: `src-tauri/src/commands/vault.rs`, `lib.rs`
+
+- [x] `entries.deleted_at` 迁移（幂等）
+- [x] `delete_entry` → 软删除；`list_trash_entries` / `restore_entry` / `purge_entry` / `empty_trash`
+- [x] 列表/搜索排除已删除；30 天 `purge_expired_trash`
+
+### Task 8.2: 前端回收站
+
+**Files:**
+- Modify: `src/stores/vault.ts`, `src/views/VaultView.vue`, `ItemDetail.vue`, `DeleteConfirmModal.vue`
+
+- [x] 回收站导航加载 trash 列表、搜索、计数、清空
+- [x] 详情恢复 / 永久删除；删除确认改为「移至回收站」
+
+### Task 8.3: 解锁锁定同步
+
+- [x] `get_unlock_status` IPC + `auth.syncUnlockStatus`（Unlock 页刷新倒计时）
+
+---
+
 ## 完成检查清单
 
 - [x] TopBar 40px + shield_lock
@@ -588,7 +615,7 @@ git commit -m "feat(ui): align UnlockView with unlock_lockout prototype"
 - [x] 新建条目类型选择器（Card 隐藏）
 - [x] 删除确认模态
 - [x] 空状态三场景
-- [x] 回收站 UI stub（数据流依赖后端 soft-delete）
+- [x] 回收站完整流程（soft-delete + 恢复/清空）
 - [x] 移除 Lucide 依赖
 - [ ] 逐屏目视对比 `screen.png`（未正式 sign-off）
 - [x] 合并 `feature/frontend-prototype-refactor` → `master`

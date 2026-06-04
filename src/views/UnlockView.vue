@@ -68,7 +68,8 @@ function togglePasswordVisibility() {
   showPassword.value = !showPassword.value
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await auth.syncUnlockStatus()
   countdownTimer = setInterval(syncLockoutExpiry, 1000)
 })
 

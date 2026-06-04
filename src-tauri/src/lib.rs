@@ -57,6 +57,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::auth::is_initialized,
+            commands::auth::get_unlock_status,
             commands::auth::setup,
             commands::auth::unlock,
             commands::auth::lock,
@@ -69,6 +70,10 @@ pub fn run() {
             commands::vault::create_entry,
             commands::vault::update_entry,
             commands::vault::delete_entry,
+            commands::vault::list_trash_entries,
+            commands::vault::restore_entry,
+            commands::vault::purge_entry,
+            commands::vault::empty_trash,
             commands::vault::toggle_favorite,
             commands::generator::generate_password,
             commands::breach::check_password_breach,

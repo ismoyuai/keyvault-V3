@@ -32,8 +32,7 @@ const config = computed(() => {
         iconSize: 40,
         iconWrap: 'plain' as const,
         title: '回收站是空的',
-        description:
-          'v1 当前为永久删除，软删除 API 尚未接入。接入后，已删除条目将在此保留 30 天，之后永久销毁。',
+        description: '已删除的条目会在此保留 30 天，之后自动永久销毁，无法恢复。',
         showQuery: false,
         showCreate: false,
         showClear: false,
