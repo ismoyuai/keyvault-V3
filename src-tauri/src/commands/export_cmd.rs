@@ -129,7 +129,7 @@ struct ImportData {
 pub async fn import_vault(
     state: State<'_, AppState>,
     session_token: String,
-    json: String,
+    data: String,
 ) -> Result<usize, String> {
     if !state.sessions.validate(&session_token).await {
         return Err("会话已过期".to_string());
@@ -138,7 +138,7 @@ pub async fn import_vault(
     let key_guard = state.encryption_key.read().await;
     let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
 
-    let data: ImportData = serde_json::from_str(&json)
+    let data: ImportData = serde_json::from_str(&data)
         .map_err(|e| format!("JSON 解析失败: {}", e))?;
 
     let mut count = 0;

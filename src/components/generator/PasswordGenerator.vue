@@ -4,8 +4,10 @@ import KvIcon from '@/components/icons/KvIcon.vue'
 import { usePasswordGenerator } from '@/composables/usePasswordGen'
 import PasswordStrength from '@/components/security/PasswordStrength.vue'
 import KvButton from '@/components/ui/KvButton.vue'
+import { security } from '@/bridge/tauri'
+import type { PasswordOptions } from '@/types/vault'
 
-const { generate, length, options, excludeAmbiguous } = usePasswordGenerator()
+const { length, options, excludeAmbiguous } = usePasswordGenerator()
 
 const emit = defineEmits<{
   select: [password: string]
@@ -13,10 +15,30 @@ const emit = defineEmits<{
 
 const password = ref('')
 const copied = ref(false)
+const mode = ref<'random' | 'diceware'>('random')
+const generating = ref(false)
 
-function generatePassword() {
-  password.value = generate()
-  copied.value = false
+async function generatePassword() {
+  generating.value = true
+  try {
+    const opts: PasswordOptions = {
+      length: mode.value === 'diceware' ? Math.max(4, Math.min(length.value, 12)) : length.value,
+      uppercase: options.value.uppercase,
+      lowercase: options.value.lowercase,
+      numbers: options.value.numbers,
+      symbols: options.value.symbols,
+      excludeAmbiguous: excludeAmbiguous.value,
+      mode: mode.value,
+    }
+    password.value = await security.generatePassword(opts)
+    copied.value = false
+  } catch {
+    // 降级到本地生成（仅 random 模式）
+    const { generate } = usePasswordGenerator()
+    password.value = generate()
+  } finally {
+    generating.value = false
+  }
 }
 
 async function copyPassword() {
@@ -34,35 +56,71 @@ generatePassword()
 
 <template>
   <div class="password-generator">
+    <div class="mode-tabs">
+      <button
+        type="button"
+        class="mode-tab"
+        :class="{ active: mode === 'random' }"
+        @click="mode = 'random'; generatePassword()"
+      >
+        随机密码
+      </button>
+      <button
+        type="button"
+        class="mode-tab"
+        :class="{ active: mode === 'diceware' }"
+        @click="mode = 'diceware'; generatePassword()"
+      >
+        Diceware 词组
+      </button>
+    </div>
+
     <div class="password-display">
       <code class="password-text">{{ password }}</code>
       <div class="password-actions">
         <button type="button" class="icon-btn" :title="copied ? '已复制' : '复制'" @click="copyPassword">
           <KvIcon :name="copied ? 'check' : 'content_copy'" :size="16" />
         </button>
-        <button type="button" class="icon-btn" title="重新生成" @click="generatePassword">
+        <button
+          type="button"
+          class="icon-btn"
+          title="重新生成"
+          :disabled="generating"
+          @click="generatePassword"
+        >
           <KvIcon name="autorenew" :size="16" />
         </button>
       </div>
     </div>
 
-    <PasswordStrength :password="password" variant="segments" />
+    <PasswordStrength v-if="mode === 'random'" :password="password" variant="segments" />
 
     <div class="options">
       <div class="option-row option-row--length">
-        <label>长度 {{ length }}</label>
-        <input v-model.number="length" type="range" min="8" max="128" @input="generatePassword()" />
+        <label>{{ mode === 'diceware' ? `词数 ${Math.max(4, Math.min(length, 12))}` : `长度 ${length}` }}</label>
+        <input
+          v-model.number="length"
+          type="range"
+          :min="mode === 'diceware' ? 4 : 8"
+          :max="mode === 'diceware' ? 12 : 128"
+          @input="generatePassword()"
+        />
       </div>
-      <div class="option-grid">
-        <label><input v-model="options.uppercase" type="checkbox" @change="generatePassword()" /> 大写 A-Z</label>
-        <label><input v-model="options.lowercase" type="checkbox" @change="generatePassword()" /> 小写 a-z</label>
-        <label><input v-model="options.numbers" type="checkbox" @change="generatePassword()" /> 数字 0-9</label>
-        <label><input v-model="options.symbols" type="checkbox" @change="generatePassword()" /> 符号</label>
-      </div>
-      <label class="option-ambiguous">
-        <input v-model="excludeAmbiguous" type="checkbox" @change="generatePassword()" />
-        排除易混淆字符 (0/O, 1/l)
-      </label>
+      <template v-if="mode === 'random'">
+        <div class="option-grid">
+          <label><input v-model="options.uppercase" type="checkbox" @change="generatePassword()" /> 大写 A-Z</label>
+          <label><input v-model="options.lowercase" type="checkbox" @change="generatePassword()" /> 小写 a-z</label>
+          <label><input v-model="options.numbers" type="checkbox" @change="generatePassword()" /> 数字 0-9</label>
+          <label><input v-model="options.symbols" type="checkbox" @change="generatePassword()" /> 符号</label>
+        </div>
+        <label class="option-ambiguous">
+          <input v-model="excludeAmbiguous" type="checkbox" @change="generatePassword()" />
+          排除易混淆字符 (0/O, 1/l)
+        </label>
+      </template>
+      <p v-else class="diceware-hint">
+        使用随机词组拼接，易于记忆且熵值较高（如 correct-horse-battery-staple）
+      </p>
     </div>
 
     <KvButton variant="primary" class="use-btn" @click="emit('select', password)">
@@ -76,6 +134,30 @@ generatePassword()
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.mode-tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--bg-base);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+}
+
+.mode-tab {
+  flex: 1;
+  padding: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast);
+}
+
+.mode-tab.active {
+  background: var(--bg-elevated);
+  color: var(--text-accent);
+  font-weight: 600;
 }
 
 .password-display {
@@ -152,6 +234,12 @@ generatePassword()
 .option-ambiguous {
   font-size: var(--text-sm);
   color: var(--text-secondary);
+}
+
+.diceware-hint {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  line-height: 1.5;
 }
 
 .use-btn {

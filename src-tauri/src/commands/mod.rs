@@ -6,5 +6,6 @@ pub mod generator;
 pub mod groups;
 pub mod native_ext;
 pub mod settings;
+pub mod sync;
 pub mod vault;
 pub mod window;

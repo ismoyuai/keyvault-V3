@@ -1,26 +1,39 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import KvAppLayout from '@/components/shell/KvAppLayout.vue'
 import KvSettingsNav from '@/components/shell/KvSettingsNav.vue'
 import type { SettingsTabId } from '@/components/shell/KvSettingsNav.vue'
 import ChangePasswordModal from '@/components/settings/ChangePasswordModal.vue'
+import EmergencyWipeModal from '@/components/settings/EmergencyWipeModal.vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useVaultStore } from '@/stores/vault'
 import { useAutoLock } from '@/composables/useAutoLock'
 import { useToast } from '@/composables/useToast'
-import { security, vault as vaultBridge } from '@/bridge/tauri'
+import { security, vault as vaultBridge, sync as syncBridge } from '@/bridge/tauri'
+import type { SyncConfig, SyncStatus } from '@/bridge/tauri'
 
 const router = useRouter()
 const settings = useSettingsStore()
+const vaultStore = useVaultStore()
 const { lock } = useAutoLock()
 const toast = useToast()
 
 const activeTab = ref<SettingsTabId>('general')
 const changePasswordOpen = ref(false)
+const wipeOpen = ref(false)
 
 const checkPassword = ref('')
 const breachResult = ref<string | null>(null)
 const checkingBreach = ref(false)
+
+const syncUrl = ref('')
+const syncUsername = ref('')
+const syncPassword = ref('')
+const syncConfig = ref<SyncConfig | null>(null)
+const syncStatus = ref<SyncStatus | null>(null)
+const syncLoading = ref(false)
+const importing = ref(false)
 
 async function handleBreachCheck() {
   if (!checkPassword.value) return
@@ -58,9 +71,100 @@ async function handleExport() {
   }
 }
 
+async function handleImport() {
+  importing.value = true
+  try {
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const path = await open({
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      multiple: false,
+    })
+    if (!path || typeof path !== 'string') return
+    const { readTextFile } = await import('@tauri-apps/plugin-fs')
+    const content = await readTextFile(path)
+    const count = await vaultBridge.importVault(content, 'json')
+    await vaultStore.loadEntries()
+    toast.success(`成功导入 ${count} 条记录`)
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : '导入失败'
+    toast.error(message)
+  } finally {
+    importing.value = false
+  }
+}
+
+async function loadSyncConfig() {
+  try {
+    syncConfig.value = await syncBridge.getConfig()
+    syncUrl.value = syncConfig.value.url
+    syncUsername.value = syncConfig.value.username
+    syncStatus.value = await syncBridge.getStatus()
+  } catch {
+    // 未配置时忽略
+  }
+}
+
+async function handleSaveSyncConfig() {
+  syncLoading.value = true
+  try {
+    await syncBridge.setConfig(syncUrl.value, syncUsername.value, syncPassword.value)
+    syncPassword.value = ''
+    await loadSyncConfig()
+    toast.success('同步配置已保存')
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : '保存失败')
+  } finally {
+    syncLoading.value = false
+  }
+}
+
+async function handleTestSync() {
+  syncLoading.value = true
+  try {
+    await syncBridge.testConnection()
+    toast.success('WebDAV 连接成功')
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : '连接失败')
+  } finally {
+    syncLoading.value = false
+  }
+}
+
+async function handleSyncPush() {
+  syncLoading.value = true
+  try {
+    const result = await syncBridge.push()
+    await loadSyncConfig()
+    toast.success(`已上传 ${result.entriesSent} 条变更`)
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : '上传失败')
+  } finally {
+    syncLoading.value = false
+  }
+}
+
+async function handleSyncPull() {
+  syncLoading.value = true
+  try {
+    const result = await syncBridge.pull()
+    await vaultStore.loadEntries()
+    await loadSyncConfig()
+    toast.success(`已合并 ${result.entriesMerged} 条远程记录`)
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : '下载失败')
+  } finally {
+    syncLoading.value = false
+  }
+}
+
 function handleNav(id: SettingsTabId) {
   activeTab.value = id
+  if (id === 'data') loadSyncConfig()
 }
+
+onMounted(() => {
+  if (activeTab.value === 'data') loadSyncConfig()
+})
 </script>
 
 <template>
@@ -136,6 +240,15 @@ function handleNav(id: SettingsTabId) {
                   修改主密码
                 </button>
               </div>
+              <div class="setting-row">
+                <div class="setting-label">
+                  <span class="label-text">紧急擦除</span>
+                  <span class="label-hint">永久删除所有本地数据，不可恢复</span>
+                </div>
+                <button type="button" class="btn-danger-outline" @click="wipeOpen = true">
+                  紧急擦除
+                </button>
+              </div>
               <div class="setting-block">
                 <div class="setting-label">
                   <span class="label-text">密码泄露检测 (HIBP)</span>
@@ -170,6 +283,85 @@ function handleNav(id: SettingsTabId) {
                 </div>
                 <button type="button" class="btn-secondary" @click="handleExport">导出 JSON</button>
               </div>
+              <div class="setting-row">
+                <div class="setting-label">
+                  <span class="label-text">导入密码库</span>
+                  <span class="label-hint">从 JSON 文件导入条目（追加，不覆盖已有）</span>
+                </div>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  :disabled="importing"
+                  @click="handleImport"
+                >
+                  {{ importing ? '导入中…' : '导入 JSON' }}
+                </button>
+              </div>
+
+              <div class="setting-block sync-block">
+                <div class="setting-label">
+                  <span class="label-text">WebDAV 同步</span>
+                  <span class="label-hint">通过私有 NAS 同步加密库（群晖、威联通等）</span>
+                </div>
+                <div class="sync-form">
+                  <input
+                    v-model="syncUrl"
+                    type="url"
+                    class="setting-input sync-input"
+                    placeholder="https://nas.example.com:5006"
+                  />
+                  <input
+                    v-model="syncUsername"
+                    type="text"
+                    class="setting-input sync-input"
+                    placeholder="用户名"
+                  />
+                  <input
+                    v-model="syncPassword"
+                    type="password"
+                    class="setting-input sync-input"
+                    :placeholder="syncConfig?.configured ? '留空则保留原密码' : '密码'"
+                    autocomplete="off"
+                  />
+                </div>
+                <p v-if="syncStatus?.lastRemoteSync" class="sync-status">
+                  远程最后修改：{{ syncStatus.lastRemoteSync }}
+                </p>
+                <div class="sync-actions">
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    :disabled="syncLoading"
+                    @click="handleSaveSyncConfig"
+                  >
+                    保存配置
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    :disabled="syncLoading"
+                    @click="handleTestSync"
+                  >
+                    测试连接
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    :disabled="syncLoading"
+                    @click="handleSyncPush"
+                  >
+                    上传到 NAS
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    :disabled="syncLoading"
+                    @click="handleSyncPull"
+                  >
+                    从 NAS 下载
+                  </button>
+                </div>
+              </div>
             </section>
 
             <section v-if="activeTab === 'about'" class="settings-section">
@@ -195,6 +387,7 @@ function handleNav(id: SettingsTabId) {
       :open="changePasswordOpen"
       @close="changePasswordOpen = false"
     />
+    <EmergencyWipeModal :open="wipeOpen" @close="wipeOpen = false" />
   </div>
 </template>
 
@@ -386,5 +579,48 @@ function handleNav(id: SettingsTabId) {
 
 .btn-danger:hover {
   opacity: 0.9;
+}
+
+.btn-danger-outline {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.btn-danger-outline:hover {
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+}
+
+.sync-block {
+  margin-top: var(--space-2);
+}
+
+.sync-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.sync-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.sync-status {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 </style>

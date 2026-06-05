@@ -276,3 +276,56 @@ pub async fn change_password(
 
     Ok(())
 }
+
+/// 紧急擦除：验证主密码后永久删除所有本地数据
+#[tauri::command]
+pub async fn emergency_wipe(
+    session_token: String,
+    password: String,
+    confirmation: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    if confirmation != "DELETE" {
+        return Err("请输入 DELETE 以确认擦除".to_string());
+    }
+
+    if !state.sessions.validate(&session_token).await {
+        return Err("会话已过期".to_string());
+    }
+
+    use zeroize::Zeroizing;
+
+    let password_bytes = Zeroizing::new(password.into_bytes());
+
+    let hash = queries::get_config(&state.db, "password_hash")
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or("密码管理器未初始化")?;
+
+    let valid = kdf::verify_master_password(&password_bytes, &hash).map_err(|e| e.to_string())?;
+    if !valid {
+        return Err("主密码错误".to_string());
+    }
+
+    audit_log!(&state.db, "emergency_wipe");
+
+    state.lock().await;
+
+    let tables = [
+        "field_history",
+        "fields",
+        "entries",
+        "groups",
+        "audit_log",
+        "breach_cache",
+        "config",
+    ];
+    for table in tables {
+        sqlx::query(&format!("DELETE FROM {table}"))
+            .execute(&state.db)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}

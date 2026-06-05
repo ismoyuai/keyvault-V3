@@ -148,6 +148,14 @@ export const useAuthStore = defineStore('auth', () => {
     await authBridge.changePassword(oldPassword, newPassword)
   }
 
+  async function emergencyWipe(password: string, confirmation: string) {
+    await authBridge.emergencyWipe(password, confirmation)
+    clearSessionToken()
+    isUnlocked.value = false
+    isInitialized.value = false
+    resetUnlockLockout()
+  }
+
   return {
     isUnlocked,
     isInitialized,
@@ -164,5 +172,6 @@ export const useAuthStore = defineStore('auth', () => {
     unlock,
     lock,
     changePassword,
+    emergencyWipe,
   }
 })

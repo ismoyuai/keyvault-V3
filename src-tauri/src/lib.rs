@@ -4,6 +4,7 @@ mod db;
 mod error;
 mod native_messaging;
 mod state;
+mod sync;
 mod tray;
 
 use state::AppState;
@@ -62,6 +63,7 @@ pub fn run() {
             commands::auth::unlock,
             commands::auth::lock,
             commands::auth::change_password,
+            commands::auth::emergency_wipe,
             commands::export_cmd::export_vault,
             commands::export_cmd::import_vault,
             commands::vault::list_entries,
@@ -81,6 +83,12 @@ pub fn run() {
             commands::clipboard_cmd::clear_clipboard,
             commands::settings::get_setting,
             commands::settings::set_setting,
+            commands::sync::get_sync_config,
+            commands::sync::set_sync_config,
+            commands::sync::test_webdav_connection,
+            commands::sync::sync_push,
+            commands::sync::sync_pull,
+            commands::sync::get_sync_status,
             commands::groups::list_groups,
             commands::groups::create_group,
             commands::groups::update_group,

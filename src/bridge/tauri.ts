@@ -51,6 +51,12 @@ export const auth = {
       oldPassword,
       newPassword,
     }),
+  emergencyWipe: (password: string, confirmation: string) =>
+    invoke<void>('emergency_wipe', {
+      sessionToken: getToken(),
+      password,
+      confirmation,
+    }),
 }
 
 // ============================================
@@ -159,4 +165,45 @@ export const settings = {
   get: (key: string) => invoke<string | null>('get_setting', { key }),
   set: (key: string, value: string) =>
     invoke<void>('set_setting', { sessionToken: getToken(), key, value }),
+}
+
+// ============================================
+// WebDAV 同步
+// ============================================
+export interface SyncConfig {
+  url: string
+  username: string
+  configured: boolean
+  lastSyncTime: number | null
+  deviceId: string | null
+}
+
+export interface SyncPushResult {
+  entriesSent: number
+  exportedAt: string
+}
+
+export interface SyncPullResult {
+  entriesMerged: number
+  remoteTime: string | null
+}
+
+export interface SyncStatus {
+  lastRemoteSync: string | null
+  lastLocalSync: number | null
+}
+
+export const sync = {
+  getConfig: () => invoke<SyncConfig>('get_sync_config'),
+  setConfig: (url: string, username: string, password: string) =>
+    invoke<void>('set_sync_config', {
+      sessionToken: getToken(),
+      input: { url, username, password },
+    }),
+  testConnection: () =>
+    invoke<void>('test_webdav_connection', { sessionToken: getToken() }),
+  push: () => invoke<SyncPushResult>('sync_push', { sessionToken: getToken() }),
+  pull: () => invoke<SyncPullResult>('sync_pull', { sessionToken: getToken() }),
+  getStatus: () =>
+    invoke<SyncStatus>('get_sync_status', { sessionToken: getToken() }),
 }

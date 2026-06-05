@@ -1,7 +1,7 @@
 # 前端原型重构 — 目视验收清单
 
 > **计划:** [`2026-06-04-frontend-prototype-refactor.md`](./2026-06-04-frontend-prototype-refactor.md)  
-> **状态:** 代码侧已完成（Phase 0–8）；本清单供人工 `npm run tauri dev` 签字  
+> **状态:** 代码侧已完成（Phase 0–8 + 紧急擦除/导入/WebDAV/Diceware）；本清单供人工 `npm run tauri dev` 签字  
 > **日期:** 2026-06-04
 
 ## 运行方式
@@ -43,7 +43,16 @@ npm run tauri dev
 ## 延后（v1 不验收）
 
 - `screens/vault/note-layout-b` 笔记布局变体 B（320px 列表）
-- `modal_emergency_wipe`（无后端）
+- 浏览器扩展（暂停，待桌面端验收后单独开发）
+
+## 新增验收项（2026-06-05）
+
+| 功能 | 路由/触发 | 通过 |
+|------|-----------|------|
+| 导入 JSON | 设置 → 数据 → 导入 | [ ] |
+| WebDAV 同步 | 设置 → 数据 → 同步配置 | [ ] |
+| 紧急擦除 | 设置 → 安全 → 紧急擦除 | [ ] |
+| Diceware 模式 | 密码生成器 → Diceware 词组 | [ ] |
 
 ## 签字
 

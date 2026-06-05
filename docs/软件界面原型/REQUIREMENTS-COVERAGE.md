@@ -34,7 +34,7 @@
 | 密码库 | 空状态 | `screens/vault/empty-states/` | `VaultEmptyState.vue` | **Done** |
 | 安全工具 | 剪贴板倒计时 | `screens/components/clipboard-timer/` | `ClipboardTimer.vue` | **Done** |
 | 安全工具 | HIBP | `screens/settings/main/` | `SettingsView` + `BreachBadge` | **Done** |
-| 账户 | 紧急擦除 | `screens/modals/emergency-wipe/` | 无 | Future |
+| 账户 | 紧急擦除 | `screens/modals/emergency-wipe/` | `EmergencyWipeModal.vue` + `auth.rs` | **Done** |
 | 密码库 | 笔记变体 B | `screens/vault/note-layout-b/` | 标准三栏 | ⏸ 延后 |
 
 ---
@@ -42,5 +42,6 @@
 ## 结论
 
 - 实现对照 **仅使用** `screens/<分类>/<名>/` 下的 `code.html` 与 `screen.png`。  
-- 桌面 Must/Should 已在 `master` 实现；剩余工作主要为人工目视 sign-off。  
-- 浏览器扩展 UI 不在本目录，见项目 `extension/` 与上层文档。
+- 桌面 Must/Should 已在 `master` 实现；含紧急擦除、导入/导出、WebDAV 同步、Diceware 密码生成。  
+- 剩余工作：人工目视 sign-off（`SIGNOFF.md`）。  
+- **浏览器扩展暂停开发**，待桌面端功能验收完成后再单独推进；见 `extension/`。
