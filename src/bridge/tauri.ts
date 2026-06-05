@@ -12,6 +12,21 @@ import type {
   Group,
 } from '@/types/vault'
 
+const NOT_TAURI_MSG =
+  '请在 Tauri 桌面应用中运行（npm run tauri dev），浏览器模式无法访问密码库'
+
+/** 是否在 Tauri WebView 环境内 */
+export function isTauri(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+}
+
+function ipcInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  if (!isTauri()) {
+    return Promise.reject(new Error(NOT_TAURI_MSG))
+  }
+  return invoke<T>(cmd, args)
+}
+
 // ============================================
 // 会话令牌管理
 // ============================================
@@ -40,19 +55,19 @@ export interface UnlockStatus {
 }
 
 export const auth = {
-  isInitialized: () => invoke<boolean>('is_initialized'),
-  getUnlockStatus: () => invoke<UnlockStatus>('get_unlock_status'),
-  setup: (password: string) => invoke<string>('setup', { password }),
-  unlock: (password: string) => invoke<string>('unlock', { password }),
-  lock: () => invoke<void>('lock'),
+  isInitialized: () => ipcInvoke<boolean>('is_initialized'),
+  getUnlockStatus: () => ipcInvoke<UnlockStatus>('get_unlock_status'),
+  setup: (password: string) => ipcInvoke<string>('setup', { password }),
+  unlock: (password: string) => ipcInvoke<string>('unlock', { password }),
+  lock: () => ipcInvoke<void>('lock'),
   changePassword: (oldPassword: string, newPassword: string) =>
-    invoke<void>('change_password', {
+    ipcInvoke<void>('change_password', {
       sessionToken: getToken(),
       oldPassword,
       newPassword,
     }),
   emergencyWipe: (password: string, confirmation: string) =>
-    invoke<void>('emergency_wipe', {
+    ipcInvoke<void>('emergency_wipe', {
       sessionToken: getToken(),
       password,
       confirmation,
@@ -64,59 +79,59 @@ export const auth = {
 // ============================================
 export const vault = {
   listEntries: () =>
-    invoke<EntryMeta[]>('list_entries', { sessionToken: getToken() }),
+    ipcInvoke<EntryMeta[]>('list_entries', { sessionToken: getToken() }),
 
   getEntrySecrets: (entryId: string) =>
-    invoke<EntrySecrets>('get_entry_secrets', {
+    ipcInvoke<EntrySecrets>('get_entry_secrets', {
       sessionToken: getToken(),
       entryId,
     }),
 
   createEntry: (input: CreateEntryInput) =>
-    invoke<string>('create_entry', { sessionToken: getToken(), input }),
+    ipcInvoke<string>('create_entry', { sessionToken: getToken(), input }),
 
   updateEntry: (entryId: string, input: CreateEntryInput) =>
-    invoke<void>('update_entry', { sessionToken: getToken(), entryId, input }),
+    ipcInvoke<void>('update_entry', { sessionToken: getToken(), entryId, input }),
 
   deleteEntry: (entryId: string) =>
-    invoke<void>('delete_entry', { sessionToken: getToken(), entryId }),
+    ipcInvoke<void>('delete_entry', { sessionToken: getToken(), entryId }),
 
   listTrashEntries: () =>
-    invoke<EntryMeta[]>('list_trash_entries', { sessionToken: getToken() }),
+    ipcInvoke<EntryMeta[]>('list_trash_entries', { sessionToken: getToken() }),
 
   restoreEntry: (entryId: string) =>
-    invoke<void>('restore_entry', { sessionToken: getToken(), entryId }),
+    ipcInvoke<void>('restore_entry', { sessionToken: getToken(), entryId }),
 
   purgeEntry: (entryId: string) =>
-    invoke<void>('purge_entry', { sessionToken: getToken(), entryId }),
+    ipcInvoke<void>('purge_entry', { sessionToken: getToken(), entryId }),
 
   emptyTrash: () =>
-    invoke<number>('empty_trash', { sessionToken: getToken() }),
+    ipcInvoke<number>('empty_trash', { sessionToken: getToken() }),
 
   toggleFavorite: (entryId: string) =>
-    invoke<void>('toggle_favorite', { sessionToken: getToken(), entryId }),
+    ipcInvoke<void>('toggle_favorite', { sessionToken: getToken(), entryId }),
 
   searchEntries: (query: string) =>
-    invoke<EntryMeta[]>('search_entries', { sessionToken: getToken(), query }),
+    ipcInvoke<EntryMeta[]>('search_entries', { sessionToken: getToken(), query }),
 
   exportVault: (format: string) =>
-    invoke<string>('export_vault', { sessionToken: getToken(), format }),
+    ipcInvoke<string>('export_vault', { sessionToken: getToken(), format }),
 
   importVault: (data: string, format: string) =>
-    invoke<number>('import_vault', { sessionToken: getToken(), data, format }),
+    ipcInvoke<number>('import_vault', { sessionToken: getToken(), data, format }),
 }
 
 // ============================================
 // 分组
 // ============================================
 export const groups = {
-  list: () => invoke<Group[]>('list_groups', { sessionToken: getToken() }),
+  list: () => ipcInvoke<Group[]>('list_groups', { sessionToken: getToken() }),
 
   create: (name: string, icon?: string) =>
-    invoke<string>('create_group', { sessionToken: getToken(), name, icon }),
+    ipcInvoke<string>('create_group', { sessionToken: getToken(), name, icon }),
 
   update: (groupId: string, name: string, icon?: string) =>
-    invoke<void>('update_group', {
+    ipcInvoke<void>('update_group', {
       sessionToken: getToken(),
       groupId,
       name,
@@ -124,7 +139,7 @@ export const groups = {
     }),
 
   delete: (groupId: string) =>
-    invoke<void>('delete_group', { sessionToken: getToken(), groupId }),
+    ipcInvoke<void>('delete_group', { sessionToken: getToken(), groupId }),
 }
 
 // ============================================
@@ -132,39 +147,39 @@ export const groups = {
 // ============================================
 export const security = {
   checkBreach: (password: string) =>
-    invoke<BreachResult>('check_password_breach', {
+    ipcInvoke<BreachResult>('check_password_breach', {
       sessionToken: getToken(),
       password,
     }),
 
   generatePassword: (options: PasswordOptions) =>
-    invoke<string>('generate_password', { sessionToken: getToken(), options }),
+    ipcInvoke<string>('generate_password', { sessionToken: getToken(), options }),
 }
 
 // ============================================
 // 窗口控制
 // ============================================
 export const window = {
-  minimize: () => invoke<void>('minimize_window'),
-  maximize: () => invoke<void>('toggle_maximize'),
-  close: () => invoke<void>('close_window'),
+  minimize: () => ipcInvoke<void>('minimize_window'),
+  maximize: () => ipcInvoke<void>('toggle_maximize'),
+  close: () => ipcInvoke<void>('close_window'),
 }
 
 // ============================================
 // 剪贴板
 // ============================================
 export const clipboard = {
-  copy: (text: string) => invoke<void>('copy_to_clipboard', { text }),
-  clear: () => invoke<void>('clear_clipboard'),
+  copy: (text: string) => ipcInvoke<void>('copy_to_clipboard', { text }),
+  clear: () => ipcInvoke<void>('clear_clipboard'),
 }
 
 // ============================================
 // 应用设置
 // ============================================
 export const settings = {
-  get: (key: string) => invoke<string | null>('get_setting', { key }),
+  get: (key: string) => ipcInvoke<string | null>('get_setting', { key }),
   set: (key: string, value: string) =>
-    invoke<void>('set_setting', { sessionToken: getToken(), key, value }),
+    ipcInvoke<void>('set_setting', { sessionToken: getToken(), key, value }),
 }
 
 // ============================================
@@ -194,16 +209,17 @@ export interface SyncStatus {
 }
 
 export const sync = {
-  getConfig: () => invoke<SyncConfig>('get_sync_config'),
+  getConfig: () =>
+    ipcInvoke<SyncConfig>('get_sync_config', { sessionToken: getToken() }),
   setConfig: (url: string, username: string, password: string) =>
-    invoke<void>('set_sync_config', {
+    ipcInvoke<void>('set_sync_config', {
       sessionToken: getToken(),
       input: { url, username, password },
     }),
   testConnection: () =>
-    invoke<void>('test_webdav_connection', { sessionToken: getToken() }),
-  push: () => invoke<SyncPushResult>('sync_push', { sessionToken: getToken() }),
-  pull: () => invoke<SyncPullResult>('sync_pull', { sessionToken: getToken() }),
+    ipcInvoke<void>('test_webdav_connection', { sessionToken: getToken() }),
+  push: () => ipcInvoke<SyncPushResult>('sync_push', { sessionToken: getToken() }),
+  pull: () => ipcInvoke<SyncPullResult>('sync_pull', { sessionToken: getToken() }),
   getStatus: () =>
-    invoke<SyncStatus>('get_sync_status', { sessionToken: getToken() }),
+    ipcInvoke<SyncStatus>('get_sync_status', { sessionToken: getToken() }),
 }

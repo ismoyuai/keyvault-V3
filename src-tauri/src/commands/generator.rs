@@ -24,13 +24,7 @@ const AMBIGUOUS_UPPER: &str = "IO";
 const AMBIGUOUS_LOWER: &str = "l";
 const AMBIGUOUS_NUMS: &str = "01";
 
-/// Diceware 词表（简化版，32 个常用词）
-const DICEWARE_WORDS: &[&str] = &[
-    "correct", "horse", "battery", "staple", "alpha", "bravo", "charlie", "delta",
-    "echo", "foxtrot", "golf", "hotel", "india", "juliet", "kilo", "lima",
-    "mike", "november", "oscar", "papa", "quebec", "romeo", "sierra", "tango",
-    "uniform", "victor", "whiskey", "xray", "yankee", "zulu", "ocean", "mountain",
-];
+use super::diceware_words::DICEWARE_WORDS;
 
 #[tauri::command]
 pub async fn generate_password(
@@ -43,7 +37,7 @@ pub async fn generate_password(
     }
 
     if options.mode.as_deref() == Some("diceware") {
-        return generate_diceware(options.length.max(4));
+        return generate_diceware(options.length.max(6).min(12));
     }
 
     let mut charset = String::new();

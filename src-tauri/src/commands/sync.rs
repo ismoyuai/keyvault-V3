@@ -5,7 +5,7 @@ use crate::crypto::cipher;
 use crate::db::queries;
 use crate::state::AppState;
 use crate::sync::{
-    engine::{self, SyncEntry, SyncField, SyncPayload, REMOTE_PATH},
+    engine::{self, SyncEntry, SyncField, REMOTE_PATH},
     webdav::{self, WebDavConfig},
 };
 
@@ -14,6 +14,12 @@ const KEY_USERNAME: &str = "sync_webdav_username";
 const KEY_PASSWORD: &str = "sync_webdav_password";
 const KEY_DEVICE_ID: &str = "sync_device_id";
 const KEY_LAST_SYNC: &str = "sync_last_sync_time";
+
+macro_rules! audit_log {
+    ($db:expr, $action:expr) => {
+        let _ = queries::write_audit_log($db, $action, None, None, None).await;
+    };
+}
 
 #[derive(Serialize)]
 pub struct SyncConfig {
@@ -93,7 +99,7 @@ async fn get_or_create_device_id(state: &AppState) -> Result<String, String> {
 }
 
 async fn export_sync_entries(state: &AppState, key: &[u8; 32]) -> Result<Vec<SyncEntry>, String> {
-    let entries = queries::list_entries(&state.db, 10_000, 0)
+    let entries = queries::list_all_entries_for_sync(&state.db, 10_000)
         .await
         .map_err(|e| e.to_string())?;
     let groups = queries::list_groups(&state.db)
@@ -110,7 +116,8 @@ async fn export_sync_entries(state: &AppState, key: &[u8; 32]) -> Result<Vec<Syn
         let mut sync_fields = Vec::new();
         for field in fields {
             let value = if field.is_sensitive != 0 {
-                let decrypted = cipher::decrypt_field(key, &field.enc_value).map_err(|e| e.to_string())?;
+                let decrypted =
+                    cipher::decrypt_field(key, &field.enc_value).map_err(|e| e.to_string())?;
                 String::from_utf8(decrypted.to_vec()).map_err(|_| "解码失败".to_string())?
             } else {
                 field.enc_value
@@ -131,6 +138,7 @@ async fn export_sync_entries(state: &AppState, key: &[u8; 32]) -> Result<Vec<Syn
             favorited: entry.favorited != 0,
             group_name: entry.group_id.and_then(|gid| group_map.get(&gid).cloned()),
             updated_at: entry.updated_at,
+            deleted_at: entry.deleted_at,
             fields: sync_fields,
         });
     }
@@ -142,6 +150,10 @@ async fn upsert_sync_entry(
     key: &[u8; 32],
     entry: &SyncEntry,
 ) -> Result<(), String> {
+    if entry.fields.is_empty() && entry.deleted_at.is_none() {
+        return Ok(());
+    }
+
     let group_id = if let Some(ref name) = entry.group_name {
         let groups = queries::list_groups(&state.db)
             .await
@@ -176,7 +188,7 @@ async fn upsert_sync_entry(
 
     if exists > 0 {
         sqlx::query(
-            "UPDATE entries SET group_id = ?, entry_type = ?, title = ?, subtitle = ?, tags = ?, favorited = ?, updated_at = ? WHERE id = ?",
+            "UPDATE entries SET group_id = ?, entry_type = ?, title = ?, subtitle = ?, tags = ?, favorited = ?, updated_at = ?, deleted_at = ? WHERE id = ?",
         )
         .bind(&group_id)
         .bind(&entry.entry_type)
@@ -185,21 +197,24 @@ async fn upsert_sync_entry(
         .bind(&tags)
         .bind(entry.favorited as i32)
         .bind(entry.updated_at)
+        .bind(entry.deleted_at)
         .bind(&entry.id)
         .execute(&state.db)
         .await
         .map_err(|e| e.to_string())?;
 
-        sqlx::query("DELETE FROM fields WHERE entry_id = ?")
-            .bind(&entry.id)
-            .execute(&state.db)
-            .await
-            .map_err(|e| e.to_string())?;
-    } else {
+        if !entry.fields.is_empty() {
+            sqlx::query("DELETE FROM fields WHERE entry_id = ?")
+                .bind(&entry.id)
+                .execute(&state.db)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+    } else if entry.deleted_at.is_none() {
         let now = entry.updated_at;
         sqlx::query(
-            "INSERT INTO entries (id, group_id, entry_type, title, subtitle, tags, favorited, sort_order, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)",
+            "INSERT INTO entries (id, group_id, entry_type, title, subtitle, tags, favorited, sort_order, created_at, updated_at, deleted_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL)",
         )
         .bind(&entry.id)
         .bind(&group_id)
@@ -210,6 +225,25 @@ async fn upsert_sync_entry(
         .bind(entry.favorited as i32)
         .bind(now)
         .bind(now)
+        .execute(&state.db)
+        .await
+        .map_err(|e| e.to_string())?;
+    } else {
+        let now = entry.updated_at;
+        sqlx::query(
+            "INSERT INTO entries (id, group_id, entry_type, title, subtitle, tags, favorited, sort_order, created_at, updated_at, deleted_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)",
+        )
+        .bind(&entry.id)
+        .bind(&group_id)
+        .bind(&entry.entry_type)
+        .bind(&entry.title)
+        .bind(&entry.subtitle)
+        .bind(&tags)
+        .bind(entry.favorited as i32)
+        .bind(now)
+        .bind(now)
+        .bind(entry.deleted_at)
         .execute(&state.db)
         .await
         .map_err(|e| e.to_string())?;
@@ -242,7 +276,14 @@ async fn upsert_sync_entry(
 }
 
 #[tauri::command]
-pub async fn get_sync_config(state: State<'_, AppState>) -> Result<SyncConfig, String> {
+pub async fn get_sync_config(
+    session_token: String,
+    state: State<'_, AppState>,
+) -> Result<SyncConfig, String> {
+    if !state.sessions.validate(&session_token).await {
+        return Err("会话已过期".to_string());
+    }
+
     let url = queries::get_config(&state.db, KEY_URL)
         .await
         .map_err(|e| e.to_string())?
@@ -294,6 +335,7 @@ pub async fn set_sync_config(
     }
 
     let _ = get_or_create_device_id(&state).await?;
+    audit_log!(&state.db, "sync_config");
     Ok(())
 }
 
@@ -324,34 +366,32 @@ pub async fn sync_push(
     let config = load_webdav_config(&state).await?;
     let device_id = get_or_create_device_id(&state).await?;
 
-    let last_sync: i64 = queries::get_config(&state.db, KEY_LAST_SYNC)
-        .await
-        .map_err(|e| e.to_string())?
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0);
+    let local_entries = export_sync_entries(&state, key).await?;
 
-    let all_entries = export_sync_entries(&state, key).await?;
-    let entries_to_send: Vec<SyncEntry> = if last_sync > 0 {
-        all_entries
-            .into_iter()
-            .filter(|e| e.updated_at > last_sync)
-            .collect()
+    let merged_entries = if let Ok(Some(remote_content)) = webdav::download(&config, REMOTE_PATH).await
+    {
+        match engine::deserialize_payload(key, &remote_content) {
+            Ok(remote_payload) => engine::merge_entries(local_entries.clone(), remote_payload.data.entries),
+            Err(_) => local_entries.clone(),
+        }
     } else {
-        all_entries
+        local_entries.clone()
     };
 
-    let payload = engine::build_payload(&device_id, entries_to_send.clone());
-    let json = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
+    let payload = engine::build_payload(&device_id, merged_entries)?;
+    let encrypted = engine::serialize_encrypted(key, &payload)?;
 
-    webdav::upload(&config, REMOTE_PATH, &json).await?;
+    webdav::upload(&config, REMOTE_PATH, &encrypted).await?;
 
     let now = chrono::Utc::now().timestamp();
     queries::set_config(&state.db, KEY_LAST_SYNC, &now.to_string())
         .await
         .map_err(|e| e.to_string())?;
 
+    audit_log!(&state.db, "sync_push");
+
     Ok(SyncPushResult {
-        entries_sent: entries_to_send.len(),
+        entries_sent: payload.data.entries.len(),
         exported_at: payload.exported_at,
     })
 }
@@ -378,19 +418,15 @@ pub async fn sync_pull(
         });
     };
 
-    let payload: SyncPayload =
-        serde_json::from_str(&content).map_err(|e| format!("远程数据解析失败: {}", e))?;
-    engine::verify_payload(&payload)?;
+    let payload = engine::deserialize_payload(key, &content)?;
 
     let mut applied = 0usize;
     for remote_entry in &payload.data.entries {
-        let local_updated: Option<i64> = sqlx::query_scalar(
-            "SELECT updated_at FROM entries WHERE id = ? AND deleted_at IS NULL",
-        )
-        .bind(&remote_entry.id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(|e| e.to_string())?;
+        let local_updated: Option<i64> = sqlx::query_scalar("SELECT updated_at FROM entries WHERE id = ?")
+            .bind(&remote_entry.id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let should_apply = match local_updated {
             None => true,
@@ -407,6 +443,8 @@ pub async fn sync_pull(
     queries::set_config(&state.db, KEY_LAST_SYNC, &now.to_string())
         .await
         .map_err(|e| e.to_string())?;
+
+    audit_log!(&state.db, "sync_pull");
 
     Ok(SyncPullResult {
         entries_merged: applied,

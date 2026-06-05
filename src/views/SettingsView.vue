@@ -301,7 +301,7 @@ onMounted(() => {
               <div class="setting-block sync-block">
                 <div class="setting-label">
                   <span class="label-text">WebDAV 同步</span>
-                  <span class="label-hint">通过私有 NAS 同步加密库（群晖、威联通等）</span>
+                  <span class="label-hint">AES-256-GCM 加密同步包上传至 NAS（群晖、威联通等）</span>
                 </div>
                 <div class="sync-form">
                   <input

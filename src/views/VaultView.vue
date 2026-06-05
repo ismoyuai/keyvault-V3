@@ -522,7 +522,7 @@ const { list: virtualList, containerProps, wrapperProps } = useVirtualList(
 }
 
 .modal-btn--danger {
-  color: #fff;
+  color: var(--text-primary);
   background: var(--color-danger);
 }
 

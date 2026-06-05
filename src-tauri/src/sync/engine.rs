@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+use crate::crypto::cipher;
+
 pub const REMOTE_PATH: &str = "/keyvault/data.kv";
+pub const SYNC_ENCRYPTED_VERSION: u32 = 3;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncField {
@@ -21,6 +24,8 @@ pub struct SyncEntry {
     pub favorited: bool,
     pub group_name: Option<String>,
     pub updated_at: i64,
+    #[serde(rename = "deletedAt", skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<i64>,
     pub fields: Vec<SyncField>,
 }
 
@@ -38,34 +43,40 @@ pub struct SyncPayload {
     pub checksum: String,
 }
 
-pub fn compute_checksum(data: &SyncData) -> String {
-    let json = serde_json::to_string(data).unwrap_or_default();
-    let mut hasher = Sha256::new();
-    hasher.update(json.as_bytes());
-    hex::encode(hasher.finalize())
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EncryptedSyncFile {
+    pub version: u32,
+    pub ciphertext: String,
 }
 
-pub fn build_payload(device_id: &str, entries: Vec<SyncEntry>) -> SyncPayload {
+pub fn compute_checksum(data: &SyncData) -> Result<String, String> {
+    let json = serde_json::to_string(data).map_err(|e| e.to_string())?;
+    let mut hasher = Sha256::new();
+    hasher.update(json.as_bytes());
+    Ok(hex::encode(hasher.finalize()))
+}
+
+pub fn build_payload(device_id: &str, entries: Vec<SyncEntry>) -> Result<SyncPayload, String> {
     let data = SyncData { entries };
-    let checksum = compute_checksum(&data);
-    SyncPayload {
+    let checksum = compute_checksum(&data)?;
+    Ok(SyncPayload {
         version: 2,
         device_id: device_id.to_string(),
         exported_at: chrono::Utc::now().to_rfc3339(),
         data,
         checksum,
-    }
+    })
 }
 
 pub fn verify_payload(payload: &SyncPayload) -> Result<(), String> {
-    let expected = compute_checksum(&payload.data);
+    let expected = compute_checksum(&payload.data)?;
     if payload.checksum != expected {
         return Err("数据校验失败，远程文件可能被篡改".to_string());
     }
     Ok(())
 }
 
-/// 按 updated_at 合并条目（较新者胜出）
+/// 按 updated_at 合并条目（较新者胜出，含 deleted_at）
 pub fn merge_entries(local: Vec<SyncEntry>, remote: Vec<SyncEntry>) -> Vec<SyncEntry> {
     let mut merged: std::collections::HashMap<String, SyncEntry> =
         local.into_iter().map(|e| (e.id.clone(), e)).collect();
@@ -82,35 +93,69 @@ pub fn merge_entries(local: Vec<SyncEntry>, remote: Vec<SyncEntry>) -> Vec<SyncE
     merged.into_values().collect()
 }
 
+/// AES-256-GCM 加密后上传（v3 格式）
+pub fn serialize_encrypted(key: &[u8; 32], payload: &SyncPayload) -> Result<String, String> {
+    let json = serde_json::to_string(payload).map_err(|e| e.to_string())?;
+    let ciphertext = cipher::encrypt_field(key, json.as_bytes()).map_err(|e| e.to_string())?;
+    let blob = EncryptedSyncFile {
+        version: SYNC_ENCRYPTED_VERSION,
+        ciphertext,
+    };
+    serde_json::to_string(&blob).map_err(|e| e.to_string())
+}
+
+/// 解密同步文件；兼容 v2 明文 JSON
+pub fn deserialize_payload(key: &[u8; 32], content: &str) -> Result<SyncPayload, String> {
+    if let Ok(blob) = serde_json::from_str::<EncryptedSyncFile>(content) {
+        if blob.version >= SYNC_ENCRYPTED_VERSION {
+            let decrypted = cipher::decrypt_field(key, &blob.ciphertext).map_err(|e| e.to_string())?;
+            let payload: SyncPayload =
+                serde_json::from_slice(&decrypted).map_err(|e| format!("解密数据解析失败: {}", e))?;
+            verify_payload(&payload)?;
+            return Ok(payload);
+        }
+    }
+
+    let payload: SyncPayload =
+        serde_json::from_str(content).map_err(|e| format!("远程数据解析失败: {}", e))?;
+    verify_payload(&payload)?;
+    Ok(payload)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn sample_entry(id: &str, title: &str, updated_at: i64) -> SyncEntry {
+        SyncEntry {
+            id: id.into(),
+            entry_type: "login".into(),
+            title: title.into(),
+            subtitle: None,
+            tags: None,
+            favorited: false,
+            group_name: None,
+            updated_at,
+            deleted_at: None,
+            fields: vec![],
+        }
+    }
+
     #[test]
     fn test_merge_entries_newer_wins() {
-        let local = vec![SyncEntry {
-            id: "a".into(),
-            entry_type: "login".into(),
-            title: "Local".into(),
-            subtitle: None,
-            tags: None,
-            favorited: false,
-            group_name: None,
-            updated_at: 100,
-            fields: vec![],
-        }];
-        let remote = vec![SyncEntry {
-            id: "a".into(),
-            entry_type: "login".into(),
-            title: "Remote".into(),
-            subtitle: None,
-            tags: None,
-            favorited: false,
-            group_name: None,
-            updated_at: 200,
-            fields: vec![],
-        }];
+        let local = vec![sample_entry("a", "Local", 100)];
+        let remote = vec![sample_entry("a", "Remote", 200)];
         let merged = merge_entries(local, remote);
         assert_eq!(merged[0].title, "Remote");
+    }
+
+    #[test]
+    fn test_encrypt_decrypt_roundtrip() {
+        let key = [0x42u8; 32];
+        let entries = vec![sample_entry("x", "Secret", 1)];
+        let payload = build_payload("device-1", entries).unwrap();
+        let encrypted = serialize_encrypted(&key, &payload).unwrap();
+        let restored = deserialize_payload(&key, &encrypted).unwrap();
+        assert_eq!(restored.data.entries[0].title, "Secret");
     }
 }

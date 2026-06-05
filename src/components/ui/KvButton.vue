@@ -65,11 +65,11 @@ withDefaults(defineProps<Props>(), {
 /* Variants */
 .kv-btn--primary {
   background: var(--accent-blue);
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .kv-btn--primary:not(:disabled):hover {
-  background: #4a9eff;
+  background: var(--accent-blue);
 }
 
 .kv-btn--secondary {
@@ -95,7 +95,7 @@ withDefaults(defineProps<Props>(), {
 
 .kv-btn--danger {
   background: var(--color-danger);
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .kv-btn--danger:not(:disabled):hover {

@@ -5,9 +5,11 @@ import { usePasswordGenerator } from '@/composables/usePasswordGen'
 import PasswordStrength from '@/components/security/PasswordStrength.vue'
 import KvButton from '@/components/ui/KvButton.vue'
 import { security } from '@/bridge/tauri'
+import { useToast } from '@/composables/useToast'
 import type { PasswordOptions } from '@/types/vault'
 
-const { length, options, excludeAmbiguous } = usePasswordGenerator()
+const { length, options, excludeAmbiguous, generate: generateLocal } = usePasswordGenerator()
+const toast = useToast()
 
 const emit = defineEmits<{
   select: [password: string]
@@ -21,8 +23,9 @@ const generating = ref(false)
 async function generatePassword() {
   generating.value = true
   try {
+    const wordCount = Math.max(6, Math.min(length.value, 12))
     const opts: PasswordOptions = {
-      length: mode.value === 'diceware' ? Math.max(4, Math.min(length.value, 12)) : length.value,
+      length: mode.value === 'diceware' ? wordCount : length.value,
       uppercase: options.value.uppercase,
       lowercase: options.value.lowercase,
       numbers: options.value.numbers,
@@ -32,10 +35,14 @@ async function generatePassword() {
     }
     password.value = await security.generatePassword(opts)
     copied.value = false
-  } catch {
-    // 降级到本地生成（仅 random 模式）
-    const { generate } = usePasswordGenerator()
-    password.value = generate()
+  } catch (e: unknown) {
+    if (mode.value === 'diceware') {
+      const message = e instanceof Error ? e.message : 'Diceware 生成失败'
+      toast.error(message)
+      return
+    }
+    password.value = generateLocal()
+    copied.value = false
   } finally {
     generating.value = false
   }
@@ -97,11 +104,11 @@ generatePassword()
 
     <div class="options">
       <div class="option-row option-row--length">
-        <label>{{ mode === 'diceware' ? `词数 ${Math.max(4, Math.min(length, 12))}` : `长度 ${length}` }}</label>
+        <label>{{ mode === 'diceware' ? `词数 ${Math.max(6, Math.min(length, 12))}` : `长度 ${length}` }}</label>
         <input
           v-model.number="length"
           type="range"
-          :min="mode === 'diceware' ? 4 : 8"
+          :min="mode === 'diceware' ? 6 : 8"
           :max="mode === 'diceware' ? 12 : 128"
           @input="generatePassword()"
         />
@@ -119,7 +126,7 @@ generatePassword()
         </label>
       </template>
       <p v-else class="diceware-hint">
-        使用随机词组拼接，易于记忆且熵值较高（如 correct-horse-battery-staple）
+        256 词 EFF 子集，建议 6–12 词（约 48–96 bit 熵）
       </p>
     </div>
 

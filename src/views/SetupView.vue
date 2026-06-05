@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
@@ -37,6 +37,10 @@ function goBack() {
   error.value = ''
   step.value = 1
 }
+
+onMounted(() => {
+  if (auth.error) error.value = auth.error
+})
 
 async function handleSetup() {
   if (!passwordMatch.value) {
