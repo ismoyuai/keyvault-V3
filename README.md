@@ -35,7 +35,8 @@ KeyVault 是一款专为开发者和技术人员设计的本地密码管理器�
 ### 核心功能
 
 - **密码管理** — 安全存储和管理所有密码、API Key、SSH Key
-- **浏览器自动填充** — 浏览器扩展自动检测登录表单并填充凭据
+- **WebDAV 同步** — 加密同步至私有 NAS，多设备合并
+- **导入 / 导出** — JSON 全量备份与恢复
 - **密码生成器** — 内置安全密码生成器，支持自定义规则
 - **泄露检测** — 集成 Have I Been Pwned，实时检测密码泄露风险
 - **剪贴板管理** — 复制后自动倒计时清除，防止敏感信息残留
@@ -172,21 +173,9 @@ npm run tauri build
 
 ## 📱 浏览器扩展
 
-KeyVault 提供浏览器扩展，实现自动填充和密码保存。
+> **v3.0 状态：暂停交付。** 扩展代码位于 `extension/`，但 Native Messaging 与桌面端解锁态/数据库路径尚未打通（Sprint 4）。桌面端可独立使用。
 
-### 安装扩展
-
-1. 构建项目后，扩展位于 `extension/` 目录
-2. 在 Chrome 中打开 `chrome://extensions/`
-3. 启用"开发者模式"
-4. 点击"加载已解压的扩展程序"，选择 `extension/` 目录
-
-### 功能说明
-
-- **自动检测** — 自动识别登录表单
-- **一键填充** — 点击扩展图标选择凭据填充
-- **保存提示** — 登录时提示保存新凭据
-- **安全通信** — 通过 Native Messaging 与主程序通信，扩展不持有任何密钥
+计划能力：表单检测、自动填充、保存提示；通过 Native Messaging 与主程序通信，扩展不持有密钥。
 
 ---
 
@@ -202,9 +191,10 @@ KeyVault 提供浏览器扩展，实现自动填充和密码保存。
 
 ### 数据存储
 
-- 数据库位置: `%APPDATA%/keyvault/keyvault.db`
-- 数据库加密: SQLCipher (AES-256)
-- 配置文件: 应用内设置，无外部配置文件
+- 数据目录: Tauri `app_data_dir()`（标识 `com.keyvault.app`）
+- 数据库: `keyvault.db`（SQLCipher，仅解锁后打开）
+- Salt: `kdf_salt.hex`（sidecar）
+- UI 偏好: `preferences.json`（主题、自动锁定等）
 
 ---
 
@@ -212,11 +202,9 @@ KeyVault 提供浏览器扩展，实现自动填充和密码保存。
 
 KeyVault 支持 WebDAV 同步，实现私有化部署。在 **设置 → 数据** 中配置 NAS 地址与凭据。
 
-### 计划支持的同步方式
-
 - **WebDAV** — 支持群晖、威联通等 NAS 设备
-- **私有化部署** — 数据完全在您的网络内
-- **冲突处理** — 智能合并策略，防止数据丢失
+- **v3 加密远程文件** — AES-GCM，拒绝明文 v2 回退
+- **冲突处理** — `updated_at` 较新者胜出；Push 前先 Pull 合并
 
 ### 同步架构
 
@@ -282,15 +270,13 @@ cd src-tauri && cargo test
 
 ### 测试
 
-项目包含 25 个 Rust 单元测试：
-
 ```bash
-cd src-tauri && cargo test
-
-# 测试内容包括:
-# - crypto: 密钥派生、加解密、会话管理
-# - db: 配置读写、分组 CRUD、审计日志
+cd src-tauri && cargo test    # 41 项单元测试
+npm run type-check
+cd src-tauri && cargo audit   # 依赖安全审计
 ```
+
+覆盖：加密、SQLCipher、会话 TTL、CRUD 事务回滚、同步引擎、WebDAV 凭据迁移、搜索性能等。详见 `docs/PROJECT_STATUS.md`。
 
 ---
 
@@ -312,23 +298,22 @@ cd src-tauri && cargo test
 - [x] 暴力破解防护
 - [x] 审计日志
 
-### 🚧 进行中
+### 🚧 发布前
 
-- [ ] 人工目视验收（对照 UI 原型 sign-off）
-- [ ] 浏览器扩展（暂停，待桌面端验收后单独开发）
+- [ ] UI / 性能人工 SIGNOFF（`docs/软件界面原型/SIGNOFF.md`）
+- [ ] SQLCipher CLI 验收签字
 
-### 📅 计划中
+### 📅 下一里程碑
 
-- [ ] 主题切换
-- [ ] 移动端支持 (iOS/Android)
-- [ ] 多语言支持
+- [ ] 浏览器扩展 Sprint 4（C-5/C-6/C-7）
+- [ ] 主题切换、多语言、移动端（可选）
 
-### ✅ 近期完成
+### ✅ v3.0 桌面端已完成
 
-- [x] WebDAV 同步（NAS 上传/下载/合并）
-- [x] 数据导入/导出 UI
-- [x] 紧急擦除
-- [x] Diceware 密码生成模式
+- [x] SQLCipher + IPC 安全硬化
+- [x] WebDAV 同步（v3 加密、凭据 `enc:` 存储）
+- [x] 导入/导出、紧急擦除、Diceware
+- [x] 41 项 Rust 单测 · cargo audit 0 vulnerability
 
 ---
 
@@ -342,7 +327,7 @@ cd src-tauri && cargo test
 
 ### 数据备份
 
-- **定期备份数据库文件** — 位于 `%APPDATA%/keyvault/keyvault.db`
+- **定期备份数据目录** — Tauri `app_data_dir()` 下的 `keyvault.db` 与 `kdf_salt.hex`
 - **备份加密** — 数据库本身已加密，但仍建议额外加密备份
 - **多地存储** — 建议在不同位置保留备份
 
@@ -394,6 +379,6 @@ cd src-tauri && cargo test
 
 **KeyVault — 您的数据，您的规则**
 
-[报告问题](https://github.com/your-username/keyvault-v3/issues) · [功能请求](https://github.com/your-username/keyvault-v3/issues) · [文档](docs/)
+[报告问题](https://github.com/your-username/keyvault-v3/issues) · [功能请求](https://github.com/your-username/keyvault-v3/issues) · [文档](docs/README.md) · [项目状态](docs/PROJECT_STATUS.md)
 
 </div>

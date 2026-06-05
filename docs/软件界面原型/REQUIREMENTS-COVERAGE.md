@@ -1,8 +1,8 @@
 # KeyVault 需求覆盖矩阵
 
-**版本:** 2026-06-04（每屏 `code.html` + `screen.png`）  
+**版本:** 2026-06-05（每屏 `code.html` + `screen.png`）  
 **用途:** 对照产品需求、UI 原型与 Vue/Rust 实现。  
-**入口:** [README.md](./README.md)
+**入口:** [README.md](./README.md) · **验收:** [SIGNOFF.md](./SIGNOFF.md) · **项目状态:** [PROJECT_STATUS.md](../PROJECT_STATUS.md)
 
 ---
 
@@ -43,5 +43,5 @@
 
 - 实现对照 **仅使用** `screens/<分类>/<名>/` 下的 `code.html` 与 `screen.png`。  
 - 桌面 Must/Should 已在 `master` 实现；含紧急擦除、导入/导出、WebDAV 同步、Diceware 密码生成。  
-- 剩余工作：人工目视 sign-off（`SIGNOFF.md`）。  
-- **浏览器扩展暂停开发**，待桌面端功能验收完成后再单独推进；见 `extension/`。
+- 剩余工作：人工目视 sign-off（[SIGNOFF.md](./SIGNOFF.md)）。  
+- **浏览器扩展暂停**（Sprint 4：C-5/C-6/C-7），见 [PROJECT_STATUS.md](../PROJECT_STATUS.md)。

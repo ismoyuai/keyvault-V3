@@ -1,6 +1,8 @@
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Method;
 
+use crate::error::ipc_network_err;
+
 #[derive(Clone, Debug)]
 pub struct WebDavConfig {
     pub url: String,
@@ -30,7 +32,7 @@ impl WebDavConfig {
         reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()
-            .map_err(|e| e.to_string())
+            .map_err(|e| ipc_network_err("创建 HTTP 客户端失败", e))
     }
 }
 
@@ -47,12 +49,13 @@ pub async fn test_connection(config: &WebDavConfig) -> Result<(), String> {
         )
         .send()
         .await
-        .map_err(|e| format!("连接失败: {}", e))?;
+        .map_err(|e| ipc_network_err("WebDAV 连接失败", e))?;
 
     if response.status().is_success() || response.status().as_u16() == 207 {
         Ok(())
     } else {
-        Err(format!("WebDAV 响应异常: {}", response.status()))
+        tracing::error!("WebDAV 响应异常: {}", response.status());
+        Err("WebDAV 连接失败，请检查地址和凭据".to_string())
     }
 }
 
@@ -68,12 +71,13 @@ async fn ensure_directory(config: &WebDavConfig, remote_path: &str) -> Result<()
         .header(AUTHORIZATION, config.auth_header())
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| ipc_network_err("WebDAV 创建目录失败", e))?;
 
     if response.status().is_success() || response.status().as_u16() == 405 {
         Ok(())
     } else {
-        Err(format!("创建目录失败: {}", response.status()))
+        tracing::error!("WebDAV 创建目录失败: {}", response.status());
+        Err("同步目录创建失败，请重试".to_string())
     }
 }
 
@@ -87,12 +91,13 @@ pub async fn upload(config: &WebDavConfig, remote_path: &str, data: &str) -> Res
         .body(data.to_string())
         .send()
         .await
-        .map_err(|e| format!("上传失败: {}", e))?;
+        .map_err(|e| ipc_network_err("WebDAV 上传失败", e))?;
 
     if response.status().is_success() {
         Ok(())
     } else {
-        Err(format!("上传失败: {}", response.status()))
+        tracing::error!("WebDAV 上传失败: {}", response.status());
+        Err("同步上传失败，请重试".to_string())
     }
 }
 
@@ -103,20 +108,21 @@ pub async fn download(config: &WebDavConfig, remote_path: &str) -> Result<Option
         .header(AUTHORIZATION, config.auth_header())
         .send()
         .await
-        .map_err(|e| format!("下载失败: {}", e))?;
+        .map_err(|e| ipc_network_err("WebDAV 下载失败", e))?;
 
     if response.status().as_u16() == 404 {
         return Ok(None);
     }
     if !response.status().is_success() {
-        return Err(format!("下载失败: {}", response.status()));
+        tracing::error!("WebDAV 下载失败: {}", response.status());
+        return Err("同步下载失败，请重试".to_string());
     }
 
     response
         .text()
         .await
         .map(Some)
-        .map_err(|e| e.to_string())
+        .map_err(|e| ipc_network_err("WebDAV 读取响应失败", e))
 }
 
 pub async fn get_last_modified(config: &WebDavConfig, remote_path: &str) -> Result<Option<String>, String> {
@@ -126,13 +132,14 @@ pub async fn get_last_modified(config: &WebDavConfig, remote_path: &str) -> Resu
         .header(AUTHORIZATION, config.auth_header())
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| ipc_network_err("WebDAV 获取状态失败", e))?;
 
     if response.status().as_u16() == 404 {
         return Ok(None);
     }
     if !response.status().is_success() {
-        return Err(format!("获取远程状态失败: {}", response.status()));
+        tracing::error!("WebDAV 获取状态失败: {}", response.status());
+        return Err("获取远程同步状态失败，请重试".to_string());
     }
 
     Ok(response

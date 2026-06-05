@@ -4,6 +4,7 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::crypto::cipher;
 use crate::db::queries;
+use crate::import::browser_csv;
 use crate::state::AppState;
 
 #[derive(Serialize)]
@@ -147,28 +148,48 @@ pub async fn export_vault_to_file(
     Ok(true)
 }
 
-#[derive(Deserialize)]
-struct ImportEntry {
-    entry_type: String,
-    title: String,
-    subtitle: Option<String>,
-    tags: Option<String>,
-    favorited: Option<bool>,
-    group_name: Option<String>,
-    fields: Vec<ImportField>,
+#[derive(Deserialize, Clone)]
+pub(crate) struct ImportEntry {
+    pub(crate) entry_type: String,
+    pub(crate) title: String,
+    pub(crate) subtitle: Option<String>,
+    pub(crate) tags: Option<String>,
+    pub(crate) favorited: Option<bool>,
+    pub(crate) group_name: Option<String>,
+    pub(crate) fields: Vec<ImportField>,
 }
 
-#[derive(Deserialize)]
-struct ImportField {
-    field_key: String,
-    field_type: Option<String>,
-    value: String,
-    is_sensitive: Option<bool>,
+#[derive(Deserialize, Clone)]
+pub(crate) struct ImportField {
+    pub(crate) field_key: String,
+    pub(crate) field_type: Option<String>,
+    pub(crate) value: String,
+    pub(crate) is_sensitive: Option<bool>,
 }
 
 #[derive(Deserialize)]
 struct ImportData {
     entries: Vec<ImportEntry>,
+}
+
+fn parse_import_entries(data: &str, format: &str) -> Result<Vec<ImportEntry>, String> {
+    match format {
+        "json" => {
+            let parsed: ImportData = serde_json::from_str(data)
+                .map_err(|_| "JSON 解析失败，请检查文件格式".to_string())?;
+            Ok(parsed.entries)
+        }
+        "csv" | "browser-csv" => browser_csv::parse_browser_csv(data),
+        "auto" => {
+            let trimmed = data.trim_start_matches('\u{FEFF}').trim();
+            if trimmed.starts_with('{') || trimmed.starts_with('[') {
+                parse_import_entries(data, "json")
+            } else {
+                parse_import_entries(data, "csv")
+            }
+        }
+        _ => Err("不支持的导入格式，请使用 KeyVault JSON 或浏览器 CSV".to_string()),
+    }
 }
 
 async fn import_vault_data(
@@ -177,17 +198,12 @@ async fn import_vault_data(
     data: &str,
     format: &str,
 ) -> Result<usize, String> {
-    if format != "json" {
-        return Err("不支持的导入格式".to_string());
-    }
-
-    let data: ImportData =
-        serde_json::from_str(data).map_err(|_| "JSON 解析失败，请检查文件格式".to_string())?;
+    let entries = parse_import_entries(data, format)?;
 
     let db = state.db_pool().await?;
     let mut count = 0usize;
 
-    for import_entry in data.entries {
+    for import_entry in entries {
         let entry_id = uuid::Uuid::new_v4().to_string();
         let now = chrono::Utc::now().timestamp();
         let tags_json = import_entry.tags.unwrap_or_else(|| "[]".to_string());
@@ -291,7 +307,9 @@ pub async fn import_vault_from_file(
     let file_path = app
         .dialog()
         .file()
-        .add_filter("JSON", &["json"])
+        .add_filter("密码库文件", &["json", "csv"])
+        .add_filter("KeyVault JSON", &["json"])
+        .add_filter("浏览器密码 CSV", &["csv"])
         .blocking_pick_file();
 
     let Some(file_path) = file_path else {

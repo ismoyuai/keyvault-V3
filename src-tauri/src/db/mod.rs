@@ -243,4 +243,47 @@ mod tests {
         assert!(!is_vault_initialized(&dir));
         std::fs::remove_dir_all(&dir).ok();
     }
+
+    #[tokio::test]
+    async fn test_encrypted_db_rejects_wrong_key() {
+        let dir = std::env::temp_dir().join(format!("kv-sqlcipher-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let key_a = [0x42u8; 32];
+        let key_b = [0x43u8; 32];
+        let db_path = db_file_path(&dir);
+
+        let pool = open_encrypted_pool(&db_path, &key_a).await.unwrap();
+        run_migrations(&pool).await.unwrap();
+        close_pool(pool).await;
+
+        assert!(
+            open_encrypted_pool(&db_path, &key_b).await.is_err(),
+            "错误密钥不应能打开加密数据库"
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn test_plaintext_pool_cannot_read_encrypted_db() {
+        let dir = std::env::temp_dir().join(format!("kv-sqlcipher-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let key = [0x42u8; 32];
+        let db_path = db_file_path(&dir);
+
+        let pool = open_encrypted_pool(&db_path, &key).await.unwrap();
+        run_migrations(&pool).await.unwrap();
+        close_pool(pool).await;
+
+        let plaintext = open_plaintext_pool(&db_path).await.unwrap();
+        let result = sqlx::query("SELECT count(*) FROM sqlite_master")
+            .fetch_one(&plaintext)
+            .await;
+        close_pool(plaintext).await;
+        assert!(result.is_err(), "明文连接不应能读取 SQLCipher 数据库");
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
 }

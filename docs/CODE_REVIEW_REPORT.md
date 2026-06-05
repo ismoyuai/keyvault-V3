@@ -2,7 +2,8 @@
 
 > **用途：** 全项目审查发现汇总 + 修复任务清单。审查完成后按本文档逐项修复。  
 > **审查基线：** commit `9534512`（`master`，工作区干净）  
-> **最后更新：** 2026-06-05 — **全项目审查完成（Batch A–E）**
+> **最后更新：** 2026-06-05 — **Sprint 1–3 修复完成 + 文档整理（RC 候选）**  
+> **项目总览：** [PROJECT_STATUS.md](./PROJECT_STATUS.md) · **文档索引：** [README.md](./README.md)
 
 ---
 
@@ -20,10 +21,10 @@
 
 | 检查项 | 结果 |
 |--------|------|
-| `cargo test` | 31 passed |
+| `cargo test` | **41** passed（含 SQLCipher 验收 2 项） |
 | `npm run type-check` | 通过 |
-| `cargo audit` | 未安装 `cargo-audit` |
-| 编译警告 | 3 项 dead code |
+| `cargo audit` | **0 vulnerability**（Sprint 3） |
+| 编译警告 | 3 项 dead code（`list_entries`/`entry_exists`/`AppError`） |
 
 ---
 
@@ -413,13 +414,13 @@
 |------|---------|----------------|------|
 | `is_initialized` / `get_unlock_status` | — | — | 公开 |
 | `setup` / `unlock` | — | 写入 | ✅ |
-| `lock` | ❌ | 清零 | I-6 |
+| `lock` | ✅ | 清零 | Sprint 2 |
 | `change_password` / `emergency_wipe` | ✅ | ✅ | ✅ |
-| `vault::*`（11） | ✅ | 解密类 ✅ | 元数据类缺 key 检查 I-7 |
-| `export_vault` / `import_vault` | ✅ | ✅ | I-10 |
-| `generate_password` / `check_password_breach` | ✅ | — | I-11 |
-| `copy/clear_clipboard` | ❌ | — | **C-2** |
-| `get_setting` | ❌ | — | **C-3** |
+| `vault::*`（11） | ✅ | 解密类 ✅ | 元数据类已加 key 检查（I-7） |
+| `export_vault` / `import_vault` | ✅ | ✅ | I-10 已修 |
+| `generate_password` / `check_password_breach` | ✅ | — | I-11 已修 |
+| `copy/clear_clipboard` | ✅ | — | Sprint 1 |
+| `get_setting` | ⚠️ 公开键免 session | — | 敏感键需 session（C-3 已修） |
 | `set_setting` | ✅ | — | ✅ |
 | `sync::*`（6） | ✅ | 写操作 ✅ | ✅ |
 | `groups::*`（4） | ✅ | — | ✅ |
@@ -436,8 +437,8 @@
 | session token 不落盘 | ✅ | `tauri.ts` 模块变量，无 localStorage |
 | 路由守卫 | ✅ | `requiresAuth` → `/login` |
 | 锁定清 session token | ✅ | `clearSessionToken()` |
-| 锁定清 vault 元数据 | ⚠️ | I-13 |
-| 编辑表单不缓存 secrets 在 store | ✅ | 但未加载即 **C-4** |
+| 锁定清 vault 元数据 | ✅ | Sprint 3：`clearOnLock()` |
+| 编辑表单不缓存 secrets 在 store | ✅ | C-4 已修：编辑时加载 secrets |
 | 剪贴板定时清空 | ✅ | `useClipboard` + `useAutoLock` blur |
 | Pinia 持久化 | ✅ | 未使用 persist 插件 |
 
@@ -520,7 +521,7 @@ P1
 P2
 [x] I-6  lock session               ← Sprint 2 完成
 [x] I-11 breach Zeroizing           ← Sprint 2 完成
-[x] I-12 错误脱敏                   ← Sprint 2 完成（auth/breach 等关键路径）
+[x] I-12 错误脱敏                   ← Sprint 2 + 跟进（sync/webdav 已脱敏）
 [x] I-1  OsRng salt                 ← Sprint 2 完成
 [x] I-13 锁定清 vault store         ← Sprint 3 完成
 [x] I-14 CommandPalette 剪贴板      ← Sprint 3 完成
@@ -567,9 +568,9 @@ P3
 | checksum 防篡改 | ✅ |
 | 冲突合并 `updated_at` 较新胜出 | ✅ |
 | WebDAV 凭据 `enc:` 存储 | ✅（新配置） |
-| v2 明文远程文件兼容 | ⚠️ I-15 |
-| 旧版 WebDAV 密码明文 | ⚠️ I-21 |
-| 单元测试（merge + 加解密） | ✅ 3 项 |
+| v2 明文远程文件兼容 | ✅ 已拒绝（I-15） |
+| 旧版 WebDAV 密码明文 | ✅ 读取时迁移（I-21） |
+| 单元测试（merge + 加解密 + 拒绝 v2） | ✅ 4 项 |
 
 ### Native Messaging（`native_messaging/host.rs`）
 
@@ -598,8 +599,8 @@ P3
 | 检查项 | 状态 |
 |--------|------|
 | CSP `script-src 'self'` | ✅ |
-| `fs` 插件启用 | ⚠️ I-16 / I-17 |
-| 红线 #11 最小权限 | ❌ 与文档不符 |
+| `fs` 插件启用 | ✅ 已移除（I-16/I-17） |
+| 红线 #11 最小权限 | ✅ dialog + Rust `std::fs` |
 | `shell:allow-open` | ⚠️ 用于 `ItemDetail` 打开 URL |
 
 ### 扩展红线对照（Batch D）
@@ -607,23 +608,24 @@ P3
 | 红线 | 状态 |
 |------|------|
 | #8 扩展零持久化 | ✅ |
-| #11 Tauri 最小权限 | ❌ fs 插件 |
+| #11 Tauri 最小权限 | ✅ 已收紧 |
 | #12 IPC session | ⚠️ Native Host 自建 token（进程内 OK，跨进程不共享解锁） |
 
 ---
 
 ## Batch E：测试覆盖矩阵
 
-### Rust 单元测试（31 项，`cargo test` 全通过）
+### Rust 单元测试（41 项，`cargo test` 全通过）
 
 | 模块 | 测试数 | 覆盖内容 | 缺口 |
 |------|--------|----------|------|
-| `crypto/kdf.rs` | 7 | 派生确定性、哈希验证 | Argon2 耗时 ≥1s 未测 |
+| `crypto/kdf.rs` | 8 | 派生确定性、哈希验证、**Argon2 ≥900ms** | — |
 | `crypto/cipher.rs` | 6 | 往返、错误 nonce/key | 多字段独立 nonce 集成测 |
-| `crypto/session.rs` | 5 | 创建/验证/销毁/滑动窗口 | **TTL 1800s 过期未测** |
-| `db/queries.rs` | 7 | config、groups、audit_log | search、软删除、LIKE 转义未测 |
-| `sync/engine.rs` | 3 | merge、加解密往返 | checksum 篡改拒绝未测 |
-| `commands/sync.rs` | 2 | WebDAV 凭据加解密 | push/pull 集成未测 |
+| `crypto/session.rs` | 6 | 创建/验证/销毁/滑动窗口、**TTL 过期** | — |
+| `db/mod.rs` | 5 | vault 初始化、**SQLCipher 密钥拒绝/明文不可读** | — |
+| `db/queries.rs` | 8 | config、groups、audit_log、**回滚**、**搜索性能** | LIKE 转义边界未测 |
+| `sync/engine.rs` | 4 | merge、加解密往返、**拒绝 v2 明文** | checksum 篡改拒绝未测 |
+| `commands/sync.rs` | 2 | WebDAV 凭据加解密、**明文迁移** | push/pull 集成未测 |
 | `commands/generator.rs` | 1 | Diceware 词表 ≥256 | 随机模式字符集未测 |
 | `commands/native_ext.rs` | 1 | `extract_hostname` | URL 匹配逻辑未测 |
 | **`commands/auth.rs`** | **0** | — | setup 防重复、lockout、change_password |
@@ -659,8 +661,9 @@ P3
 | 验收项 | 状态 | 审查说明 |
 |--------|------|----------|
 | `cargo audit` 无高危 | ✅ | Sprint 3：`sqlx` 精简 features 后 **0 vulnerability** |
-| `cargo test` 全部通过 | ✅ | **38** 项通过 |
+| `cargo test` 全部通过 | ✅ | **41** 项通过 |
 | Argon2id 验证 ≥ 1s | ✅ | `test_derive_key_meets_minimum_duration` |
+| SQLCipher 锁定后不可读 | ✅ | `test_encrypted_db_rejects_wrong_key` + `test_plaintext_pool_cannot_read_encrypted_db`；⏳ 建议再用 `sqlite3` CLI 人工签字 |
 | 锁定后 strings 无明文 | ❌ 未测 | 需手动/自动化内存扫描 |
 | HIBP 仅发哈希前 5 字符 | ⚠️ 代码审查通过 | `breach.rs` 实现正确；Wireshark 未抓包 |
 
@@ -678,14 +681,14 @@ P3
 | 验收项 | 状态 | 说明 |
 |--------|------|------|
 | 首次设置向导 | ✅ | 代码 + REQUIREMENTS-COVERAGE |
-| 条目 CRUD | ⚠️ | **编辑存在 C-4 数据丢失风险** |
+| 条目 CRUD | ✅ | C-4/I-8/I-9 已修；列表已改全量（无 100 条上限） |
 | 命令面板 Ctrl+K | ✅ | 已实现 |
 | 密码生成器双模式 | ✅ | Diceware 走后端 |
 | 浏览器扩展（3 项） | ❌ 暂停 | 且存在 C-5/C-6/C-7 架构缺陷 |
 | 剪贴板 30s 清空 | ✅ | 桌面端；扩展 popup 无（I-19） |
 | 自动锁定 | ✅ | |
-| 导入/导出 JSON | ⚠️ | 功能有，但 **I-10 截断 100 条** |
-| WebDAV 同步 | ✅ | 代码审查通过；I-15 明文兼容需注意 |
+| 导入/导出 JSON | ✅ | I-10 全量导出 + Rust 端文件 IO |
+| WebDAV 同步 | ✅ | I-15 拒绝 v2 明文；I-21 凭据迁移；sync/webdav 错误已脱敏 |
 | 紧急擦除 | ✅ | |
 
 ### UI/UX
@@ -695,10 +698,10 @@ P3
 | 三栏布局 1280px+ | ❌ 未目视 | REQUIREMENTS 标 Done，需 SIGNOFF |
 | 详情面板 60fps | ❌ 未测 | |
 | Loading 状态 | ⚠️ 部分 | 多数有，未全量走查 |
-| 错误信息友好 | ⚠️ | `vault.rs` 好；`auth/sync/export` 仍泄露（I-12） |
+| 错误信息友好 | ✅ | vault/export/sync/webdav 已脱敏；auth 关键路径已覆盖 |
 | 无边框拖动 | ❌ 未目视 | `window.rs` 已实现 |
 
-**§九小结：** 功能面接近完成，**安全与性能验收大多未执行**；CRUD「编辑」项应降为未通过直至修复 C-4。
+**§九小结：** 桌面端安全验收大部分已通过（SQLCipher 有单测 + 建议 CLI 签字）；**冷启动/内存/安装包/UI 目视** 仍待 SIGNOFF。
 
 ---
 
@@ -709,17 +712,17 @@ P3
 | 1 | 主密码零存储 | ✅ | |
 | 2 | Argon2id 参数不可降级 | ✅ | |
 | 3 | 密钥不落盘（内存 Zeroizing） | ✅ | |
-| 4 | 锁定时清零 key + sessions | ✅ | I-2 窗口期 |
-| 5 | 敏感变量 Zeroizing | ⚠️ | I-11 breach 密码未包装 |
+| 4 | 锁定时清零 key + sessions | ✅ | I-2 已修：先毁 session |
+| 5 | 敏感变量 Zeroizing | ✅ | I-11 已修 |
 | 6 | 字段级独立 nonce | ✅ | |
 | 7 | 前端零缓存解密数据 | ✅ | Sprint 3：锁定清空 vault store |
 | 8 | 扩展零持久化 | ✅ | |
 | 9 | HIBP k-匿名 | ✅ 代码 | 未抓包 |
-| 10 | SQLCipher DB 加密 | ❌ | **C-1** |
-| 11 | Tauri 最小权限 | ❌ | **I-16/I-17** fs 插件 |
-| 12 | IPC 全部验证 session | ❌ | **C-2/C-3**；I-6 lock |
+| 10 | SQLCipher DB 加密 | ✅ | C-1 已修；单测 + ⏳ `sqlite3` CLI 签字 |
+| 11 | Tauri 最小权限 | ✅ | I-16/I-17 已修 |
+| 12 | IPC 全部验证 session | ✅ | C-2/C-3/I-6 已修；公开 `get_setting` 键白名单 |
 
-**红线通过：7/12（含 2 项代码通过未实测）**
+**红线通过：11/12（扩展 C-5/C-6/C-7 未纳入桌面端 RC）**
 
 ---
 
@@ -727,15 +730,14 @@ P3
 
 ### 总体结论
 
-KeyVault v3 **桌面端核心功能已基本可用**（设置、解锁、列表、详情、生成器、同步、紧急擦除），加密实现（Argon2id + AES-GCM + session）质量良好，31 项 Rust 单元测试全通过。
+KeyVault v3 **桌面端核心功能已可用**（设置、解锁、列表、详情、生成器、同步、紧急擦除），加密实现（Argon2id + AES-GCM + SQLCipher + session）质量良好，**41** 项 Rust 单元测试全通过。
 
-**当前不宜作为生产版本发布。** 主要原因：
+**桌面端可达 RC（发布候选）**；扩展里程碑仍阻塞完整产品发布。剩余关注点：
 
-1. **数据库文件未加密（C-1）** — 与产品安全承诺不符  
-2. **编辑条目可清空全部字段（C-4 + I-9）** — 用户数据丢失风险  
-3. **IPC 门禁缺口（C-2/C-3）** — 未解锁可读敏感配置、可写剪贴板  
-4. **导出静默截断 100 条（I-10）** — 备份不完整  
-5. **浏览器扩展不可用（C-5/C-6/C-7）** — 与暂停策略一致，但代码不可交付  
+1. **浏览器扩展不可用（C-5/C-6/C-7）** — 与暂停策略一致，Sprint 4 独立处理  
+2. **§九 性能/UI 人工 SIGNOFF 未完成** — 冷启动、内存、安装包、三栏布局目视  
+3. **锁定后内存 strings 扫描** — 未自动化  
+4. **HIBP 抓包验证** — 代码正确，未 Wireshark 实测  
 
 ### 发现汇总
 
@@ -749,16 +751,16 @@ KeyVault v3 **桌面端核心功能已基本可用**（设置、解锁、列表�
 
 | 维度 | 评分 | 说明 |
 |------|------|------|
-| 加密核心 | 8/10 | 实现扎实；缺 SQLCipher |
-| IPC 安全 | 5/10 | session 覆盖不全 |
-| 数据完整性 | 4/10 | 编辑/更新/导入无事务 |
-| 前端安全 | 7/10 | 架构正确；C-4 致命 |
-| 同步 | 7/10 | 设计合理；v2 降级风险 |
-| 扩展 | 2/10 | 架构未打通 |
-| 测试 | 5/10 | crypto 好；commands 空白 |
-| 验收完成度 | 4/10 | 大量 §九 未测 |
+| 加密核心 | 9/10 | SQLCipher + HKDF 已接入；CLI 签字待补 |
+| IPC 安全 | 8/10 | 桌面端 session 覆盖完整 |
+| 数据完整性 | 8/10 | CRUD/导入导出事务化 |
+| 前端安全 | 9/10 | C-4/I-13 已修 |
+| 同步 | 8/10 | v2 拒绝 + 凭据迁移 + 错误脱敏 |
+| 扩展 | 2/10 | 架构未打通（预期内） |
+| 测试 | 7/10 | 41 项单测；commands 集成测仍缺 |
+| 验收完成度 | 6/10 | 安全项大部分通过；性能/UI 待 SIGNOFF |
 
-**桌面端 MVP 修复后可达发布候选（RC）；扩展需独立里程碑。**
+**桌面端已达 RC 候选；扩展需 Sprint 4 独立里程碑。**
 
 ---
 
@@ -899,4 +901,20 @@ KeyVault v3 **桌面端核心功能已基本可用**（设置、解锁、列表�
 
 **Sprint 3 退出标准：** ✅ 锁定清理一致 · ✅ 核心单测补齐 · ✅ audit 无高危 · ⏳ 冷启动/内存/安装包/SIGNOFF 需人工验收
 
-**下一步：** Sprint 4 — 浏览器扩展（C-5/C-6/C-7）或人工 §九 SIGNOFF
+## 跟进修复记录（2026-06-05，审查后）
+
+| 任务 | 状态 | 改动摘要 |
+|------|------|----------|
+| 报告正文同步 | ✅ | §九、红线表、Executive Summary 与 checklist 对齐 |
+| SQLCipher 单测验收 | ✅ | `test_encrypted_db_rejects_wrong_key`、`test_plaintext_pool_cannot_read_encrypted_db` |
+| sync/webdav 错误脱敏 | ✅ | `ipc_sync_err` / `ipc_network_err`；`sync.rs` + `webdav.rs` |
+| 列表 100 条上限 | ✅ | `list_entries` 改 `list_all_active_entries`（vault + native_ext） |
+
+**验证：** `cargo test` **41** passed
+
+**待人工 SIGNOFF：** 见 [软件界面原型/SIGNOFF.md](./软件界面原型/SIGNOFF.md)
+- [ ] `sqlite3 keyvault.db ".tables"` 锁定后不可读（CLI 签字）
+- [ ] 冷启动 < 2s、空闲内存 < 60MB、安装包 < 20MB
+- [ ] 三栏布局 1280px+、详情面板 60fps、无边框拖动目视
+
+**下一步：** Sprint 4 — 浏览器扩展（C-5/C-6/C-7）或完成 §九 SIGNOFF

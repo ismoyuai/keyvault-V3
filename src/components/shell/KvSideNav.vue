@@ -25,7 +25,7 @@ const emit = defineEmits<{
 const navItems: { id: SideNavId; label: string; icon: string }[] = [
   { id: 'all', label: '全部条目', icon: 'inventory_2' },
   { id: 'favorites', label: '收藏', icon: 'star' },
-  { id: 'passwords', label: '密码', icon: 'key' },
+  { id: 'passwords', label: '密码', icon: 'vpn_key' },
   { id: 'api-keys', label: 'API 密钥', icon: 'code' },
   { id: 'notes', label: '安全笔记', icon: 'description' },
   { id: 'trash', label: '回收站', icon: 'delete' },

@@ -2,7 +2,7 @@
  * Tauri IPC 桥接层
  * 统一封装所有 invoke() 调用，管理会话令牌
  */
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri as isTauriRuntime } from '@tauri-apps/api/core'
 import type {
   EntryMeta,
   EntrySecrets,
@@ -15,9 +15,9 @@ import type {
 const NOT_TAURI_MSG =
   '请在 Tauri 桌面应用中运行（npm run tauri dev），浏览器模式无法访问密码库'
 
-/** 是否在 Tauri WebView 环境内 */
+/** 是否在 Tauri WebView 环境内（Tauri 2 使用 globalThis.isTauri） */
 export function isTauri(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+  return isTauriRuntime()
 }
 
 function ipcInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {

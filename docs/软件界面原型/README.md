@@ -17,6 +17,7 @@
 docs/软件界面原型/
 ├── README.md                 # 本文件
 ├── REQUIREMENTS-COVERAGE.md  # 需求 ↔ 原型 ↔ 代码
+├── SIGNOFF.md                # 人工目视验收清单
 ├── design-system/DESIGN.md   # 颜色、字体、间距令牌
 └── screens/                  # 每屏含 code.html + screen.png
     ├── account/
@@ -44,7 +45,7 @@ docs/软件界面原型/
 | `screens/modals/delete-confirm/` | 删除 / 移至回收站 | `DeleteConfirmModal.vue` |
 | `screens/modals/change-password/` | 修改主密码 | `ChangePasswordModal.vue` |
 | `screens/modals/password-generator/` | 密码生成器 | `PasswordGenerator.vue` |
-| `screens/modals/emergency-wipe/` | 紧急擦除 | Future（仅原型） |
+| `screens/modals/emergency-wipe/` | 紧急擦除 | `EmergencyWipeModal.vue` |
 | `screens/settings/main/` | 设置 | `SettingsView.vue` |
 | `screens/components/clipboard-timer/` | 剪贴板倒计时 | `ClipboardTimer.vue` |
 

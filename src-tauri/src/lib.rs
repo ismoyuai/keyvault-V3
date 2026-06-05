@@ -2,6 +2,7 @@ mod commands;
 mod crypto;
 mod db;
 mod error;
+mod import;
 mod native_messaging;
 mod state;
 mod sync;

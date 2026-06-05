@@ -61,6 +61,18 @@ pub fn ipc_crypto_err(e: CryptoError) -> String {
     "操作失败，请重试".to_string()
 }
 
+/// 将同步错误记录到日志并返回用户友好消息
+pub fn ipc_sync_err(context: &str, e: impl std::fmt::Debug) -> String {
+    tracing::error!("{context}: {e:?}");
+    "同步操作失败，请重试".to_string()
+}
+
+/// 将网络/WebDAV 错误记录到日志并返回用户友好消息
+pub fn ipc_network_err(context: &str, e: impl std::fmt::Debug) -> String {
+    tracing::error!("{context}: {e:?}");
+    "网络连接失败，请检查 WebDAV 配置".to_string()
+}
+
 impl serde::Serialize for AppError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

@@ -1,5 +1,8 @@
 # KeyVault v3 完整迁移规划
 
+> **状态（2026-06-05）：** 迁移已执行完毕，本文档作**架构与验收参考**保留。  
+> **当前现状：** 见 [PROJECT_STATUS.md](./PROJECT_STATUS.md) · **审查记录：** [CODE_REVIEW_REPORT.md](./CODE_REVIEW_REPORT.md)
+
 > **执行对象**：Claude Code  
 > **源仓库**：https://github.com/ismoyuai/keyvault  
 > **迁移策略**：全新项目 `keyvault-v3/`，原仓库保留为参考，不在原地修改  

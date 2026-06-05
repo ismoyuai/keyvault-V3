@@ -30,7 +30,7 @@ pub async fn find_credentials_by_url(
     let hostname = extract_hostname(url).ok_or("无效的 URL")?;
 
     let db = state.db_pool().await?;
-    let entries = queries::list_entries(&db, 100, 0)
+    let entries = queries::list_all_active_entries(&db)
         .await
         .map_err(|e| e.to_string())?;
 

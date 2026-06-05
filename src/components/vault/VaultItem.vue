@@ -19,7 +19,7 @@ const emit = defineEmits<{
 }>()
 
 const TYPE_ICONS: Record<EntryType, string> = {
-  login: 'key',
+  login: 'language',
   api_key: 'code',
   ssh_key: 'terminal',
   server: 'dns',

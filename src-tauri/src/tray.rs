@@ -12,9 +12,17 @@ pub fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     let menu = Menu::with_items(app, &[&show_item, &lock_item, &quit_item])?;
 
-    let _tray = TrayIconBuilder::new()
+    let tray_icon = app.default_window_icon().cloned();
+
+    let mut builder = TrayIconBuilder::new()
         .menu(&menu)
-        .tooltip("KeyVault")
+        .tooltip("KeyVault");
+
+    if let Some(icon) = tray_icon {
+        builder = builder.icon(icon);
+    }
+
+    let _tray = builder
         .on_menu_event(move |app, event| match event.id().as_ref() {
             "show" => {
                 if let Some(window) = app.get_webview_window("main") {

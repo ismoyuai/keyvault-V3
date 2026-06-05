@@ -111,7 +111,7 @@ pub async fn list_entries(
     key_guard.as_ref().ok_or("密码管理器已锁定")?;
 
     let db = state.db_pool().await?;
-    let rows = queries::list_entries(&db, 100, 0)
+    let rows = queries::list_all_active_entries(&db)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);

@@ -16,7 +16,7 @@ const emit = defineEmits<{
 const tabs: { id: SettingsTabId; label: string; icon: string }[] = [
   { id: 'general', label: '常规', icon: 'tune' },
   { id: 'security', label: '安全', icon: 'shield' },
-  { id: 'data', label: '数据', icon: 'database' },
+  { id: 'data', label: '数据', icon: 'dataset' },
   { id: 'about', label: '关于', icon: 'info' },
 ]
 </script>

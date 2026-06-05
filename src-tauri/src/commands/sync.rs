@@ -3,6 +3,7 @@ use tauri::State;
 
 use crate::crypto::cipher;
 use crate::db::queries;
+use crate::error::{ipc_crypto_err, ipc_db_err, ipc_sync_err};
 use crate::state::AppState;
 use crate::sync::{
     engine::{self, SyncEntry, SyncField, REMOTE_PATH},
@@ -65,7 +66,8 @@ pub struct SyncStatus {
 }
 
 fn encrypt_sync_credential(key: &[u8; 32], plaintext: &str) -> Result<String, String> {
-    let ciphertext = cipher::encrypt_field(key, plaintext.as_bytes()).map_err(|e| e.to_string())?;
+    let ciphertext =
+        cipher::encrypt_field(key, plaintext.as_bytes()).map_err(ipc_crypto_err)?;
     Ok(format!("{ENC_CREDENTIAL_PREFIX}{ciphertext}"))
 }
 
@@ -74,7 +76,7 @@ fn decrypt_sync_credential(key: &[u8; 32], stored: &str) -> Result<String, Strin
         .strip_prefix(ENC_CREDENTIAL_PREFIX)
         .ok_or_else(|| "检测到旧版明文 WebDAV 凭据，已标记需迁移".to_string())?;
 
-    let decrypted = cipher::decrypt_field(key, ciphertext).map_err(|e| e.to_string())?;
+    let decrypted = cipher::decrypt_field(key, ciphertext).map_err(ipc_crypto_err)?;
     String::from_utf8(decrypted.to_vec())
         .map_err(|_| "WebDAV 凭据解密失败，请重新保存同步配置".to_string())
 }
@@ -83,16 +85,16 @@ async fn load_webdav_config(state: &AppState, key: &[u8; 32]) -> Result<WebDavCo
     let db = state.db_pool().await?;
     let url = queries::get_config(&db, KEY_URL)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(ipc_db_err)?
         .filter(|s| !s.is_empty())
         .ok_or("请先配置 WebDAV 同步")?;
     let username = queries::get_config(&db, KEY_USERNAME)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(ipc_db_err)?
         .unwrap_or_default();
     let stored_password = queries::get_config(&db, KEY_PASSWORD)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(ipc_db_err)?
         .ok_or("请先配置 WebDAV 同步")?;
 
     // I-21：迁移旧版明文凭据为 `enc:` 格式；生产不再长期兼容明文回退
@@ -102,7 +104,7 @@ async fn load_webdav_config(state: &AppState, key: &[u8; 32]) -> Result<WebDavCo
         let encrypted = encrypt_sync_credential(key, &stored_password)?;
         queries::set_config(&db, KEY_PASSWORD, &encrypted)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(ipc_db_err)?;
         stored_password
     };
 
@@ -117,14 +119,14 @@ async fn get_or_create_device_id(state: &AppState) -> Result<String, String> {
     let db = state.db_pool().await?;
     if let Some(id) = queries::get_config(&db, KEY_DEVICE_ID)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(ipc_db_err)?
     {
         return Ok(id);
     }
     let id = uuid::Uuid::new_v4().to_string();
     queries::set_config(&db, KEY_DEVICE_ID, &id)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
     Ok(id)
 }
 
@@ -132,10 +134,10 @@ async fn export_sync_entries(state: &AppState, key: &[u8; 32]) -> Result<Vec<Syn
     let db = state.db_pool().await?;
     let entries = queries::list_all_entries_for_sync(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
     let groups = queries::list_groups(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
     let group_map: std::collections::HashMap<String, String> =
         groups.into_iter().map(|g| (g.id, g.name)).collect();
 
@@ -143,12 +145,12 @@ async fn export_sync_entries(state: &AppState, key: &[u8; 32]) -> Result<Vec<Syn
     for entry in entries {
         let fields = queries::get_entry_fields(&db, &entry.id)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(ipc_db_err)?;
         let mut sync_fields = Vec::new();
         for field in fields {
             let value = if field.is_sensitive != 0 {
                 let decrypted =
-                    cipher::decrypt_field(key, &field.enc_value).map_err(|e| e.to_string())?;
+                    cipher::decrypt_field(key, &field.enc_value).map_err(ipc_crypto_err)?;
                 String::from_utf8(decrypted.to_vec()).map_err(|_| "解码失败".to_string())?
             } else {
                 field.enc_value
@@ -189,7 +191,7 @@ async fn upsert_sync_entry(
     let group_id = if let Some(ref name) = entry.group_name {
         let groups = queries::list_groups(&db)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(ipc_db_err)?;
         if let Some(g) = groups.iter().find(|g| &g.name == name) {
             Some(g.id.clone())
         } else {
@@ -204,7 +206,7 @@ async fn upsert_sync_entry(
             .bind(now)
             .execute(&db)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(ipc_db_err)?;
             Some(gid)
         }
     } else {
@@ -216,7 +218,7 @@ async fn upsert_sync_entry(
         .bind(&entry.id)
         .fetch_one(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
 
     if exists > 0 {
         sqlx::query(
@@ -233,14 +235,14 @@ async fn upsert_sync_entry(
         .bind(&entry.id)
         .execute(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
 
         if !entry.fields.is_empty() {
             sqlx::query("DELETE FROM fields WHERE entry_id = ?")
                 .bind(&entry.id)
                 .execute(&db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(ipc_db_err)?;
         }
     } else if entry.deleted_at.is_none() {
         let now = entry.updated_at;
@@ -259,7 +261,7 @@ async fn upsert_sync_entry(
         .bind(now)
         .execute(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
     } else {
         let now = entry.updated_at;
         sqlx::query(
@@ -278,12 +280,12 @@ async fn upsert_sync_entry(
         .bind(entry.deleted_at)
         .execute(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
     }
 
     for (i, field) in entry.fields.iter().enumerate() {
         let enc_value = if field.is_sensitive {
-            cipher::encrypt_field(key, field.value.as_bytes()).map_err(|e| e.to_string())?
+            cipher::encrypt_field(key, field.value.as_bytes()).map_err(ipc_crypto_err)?
         } else {
             field.value.clone()
         };
@@ -301,7 +303,7 @@ async fn upsert_sync_entry(
         .bind(i as i32)
         .execute(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
     }
 
     Ok(())
@@ -319,22 +321,22 @@ pub async fn get_sync_config(
     let db = state.db_pool().await?;
     let url = queries::get_config(&db, KEY_URL)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(ipc_db_err)?
         .unwrap_or_default();
     let username = queries::get_config(&db, KEY_USERNAME)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(ipc_db_err)?
         .unwrap_or_default();
     let password = queries::get_config(&db, KEY_PASSWORD)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
     let last_sync = queries::get_config(&db, KEY_LAST_SYNC)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(ipc_db_err)?
         .and_then(|s| s.parse().ok());
     let device_id = queries::get_config(&db, KEY_DEVICE_ID)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
 
     Ok(SyncConfig {
         configured: !url.is_empty() && password.is_some(),
@@ -358,17 +360,17 @@ pub async fn set_sync_config(
     let db = state.db_pool().await?;
     queries::set_config(&db, KEY_URL, input.url.trim())
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
     queries::set_config(&db, KEY_USERNAME, &input.username)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
     if !input.password.is_empty() {
         let key_guard = state.encryption_key.read().await;
         let key = key_guard.as_ref().ok_or("请先解锁密码管理器")?;
         let encrypted = encrypt_sync_credential(key, &input.password)?;
         queries::set_config(&db, KEY_PASSWORD, &encrypted)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(ipc_db_err)?;
     }
 
     let _ = get_or_create_device_id(&state).await?;
@@ -410,10 +412,8 @@ pub async fn sync_push(
     let merged_entries = match webdav::download(&config, REMOTE_PATH).await {
         Ok(Some(remote_content)) => {
             let remote_payload = engine::deserialize_payload(key, &remote_content).map_err(|e| {
-                format!(
-                    "无法解密远程同步文件，已中止上传以防覆盖远程数据。若刚修改过主密码，请在所有设备用新密码重新推送。详情: {}",
-                    e
-                )
+                ipc_sync_err("远程同步文件解密失败", e);
+                "无法解密远程同步文件，已中止上传以防覆盖远程数据。若刚修改过主密码，请在所有设备用新密码重新推送。".to_string()
             })?;
             engine::merge_entries(local_entries.clone(), remote_payload.data.entries)
         }
@@ -430,7 +430,7 @@ pub async fn sync_push(
     let now = chrono::Utc::now().timestamp();
     queries::set_config(&db, KEY_LAST_SYNC, &now.to_string())
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
 
     audit_log!(&db, "sync_push");
 
@@ -471,7 +471,7 @@ pub async fn sync_pull(
             .bind(&remote_entry.id)
             .fetch_optional(&db)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(ipc_db_err)?;
 
         // 与 merge_entries 一致：updated_at 相等时保留本地
         let should_apply = match local_updated {
@@ -488,7 +488,7 @@ pub async fn sync_pull(
     let now = chrono::Utc::now().timestamp();
     queries::set_config(&db, KEY_LAST_SYNC, &now.to_string())
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
 
     audit_log!(&db, "sync_pull");
 
@@ -514,7 +514,7 @@ pub async fn get_sync_status(
     let db = state.db_pool().await?;
     let last_local = queries::get_config(&db, KEY_LAST_SYNC)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(ipc_db_err)?
         .and_then(|s| s.parse().ok());
 
     Ok(SyncStatus {

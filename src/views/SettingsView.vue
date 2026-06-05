@@ -66,7 +66,7 @@ async function handleExport() {
 async function handleImport() {
   importing.value = true
   try {
-    const count = await vaultBridge.importFromFile('json')
+    const count = await vaultBridge.importFromFile('auto')
     if (count > 0) {
       await vaultStore.loadEntries()
       toast.success(`成功导入 ${count} 条记录`)
@@ -272,7 +272,7 @@ onMounted(() => {
               <div class="setting-row">
                 <div class="setting-label">
                   <span class="label-text">导入密码库</span>
-                  <span class="label-hint">从 JSON 文件导入条目（追加，不覆盖已有）</span>
+                  <span class="label-hint">支持 KeyVault JSON、Chrome/Edge/Firefox 导出的 CSV（追加，不覆盖已有）</span>
                 </div>
                 <button
                   type="button"
@@ -280,7 +280,7 @@ onMounted(() => {
                   :disabled="importing"
                   @click="handleImport"
                 >
-                  {{ importing ? '导入中…' : '导入 JSON' }}
+                  {{ importing ? '导入中…' : '导入文件' }}
                 </button>
               </div>
 
