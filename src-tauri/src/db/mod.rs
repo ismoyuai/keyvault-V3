@@ -210,3 +210,37 @@ pub fn write_preference(data_dir: &Path, key: &str, value: &str) -> Result<(), s
 }
 
 use std::str::FromStr;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn test_is_vault_initialized_false_when_missing() {
+        let dir = std::env::temp_dir().join(format!("kv-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(!is_vault_initialized(&dir));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn test_is_vault_initialized_true_when_db_nonempty() {
+        let dir = std::env::temp_dir().join(format!("kv-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = db_file_path(&dir);
+        let mut f = std::fs::File::create(&path).unwrap();
+        f.write_all(b"sqlite3").unwrap();
+        assert!(is_vault_initialized(&dir));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn test_is_vault_initialized_false_when_db_empty() {
+        let dir = std::env::temp_dir().join(format!("kv-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::File::create(db_file_path(&dir)).unwrap();
+        assert!(!is_vault_initialized(&dir));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+}

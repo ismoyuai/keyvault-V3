@@ -11,12 +11,23 @@ const SESSION_TTL_SECS: u64 = 1800; // 30 分钟
 
 pub struct SessionManager {
     sessions: RwLock<HashMap<String, SystemTime>>,
+    ttl: Duration,
 }
 
 impl SessionManager {
     pub fn new() -> Self {
+        Self::with_ttl(Duration::from_secs(SESSION_TTL_SECS))
+    }
+
+    #[cfg(test)]
+    pub fn with_ttl_secs(secs: u64) -> Self {
+        Self::with_ttl(Duration::from_secs(secs))
+    }
+
+    fn with_ttl(ttl: Duration) -> Self {
         Self {
             sessions: RwLock::new(HashMap::new()),
+            ttl,
         }
     }
 
@@ -36,10 +47,7 @@ impl SessionManager {
         let mut sessions = self.sessions.write().await;
         match sessions.get_mut(token) {
             Some(created_at) => {
-                if created_at
-                    .elapsed()
-                    .unwrap_or_default()
-                    > Duration::from_secs(SESSION_TTL_SECS)
+                if created_at.elapsed().unwrap_or_default() > self.ttl
                 {
                     sessions.remove(token);
                     false
@@ -115,5 +123,14 @@ mod tests {
         assert_ne!(token1, token2);
         assert!(mgr.validate(&token1).await);
         assert!(mgr.validate(&token2).await);
+    }
+
+    #[tokio::test]
+    async fn test_session_expires_after_ttl() {
+        let mgr = SessionManager::with_ttl_secs(1);
+        let token = mgr.create().await;
+        assert!(mgr.validate(&token).await);
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        assert!(!mgr.validate(&token).await);
     }
 }

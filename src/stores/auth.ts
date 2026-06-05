@@ -4,6 +4,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { auth as authBridge, setSessionToken, clearSessionToken } from '@/bridge/tauri'
+import { useVaultStore } from '@/stores/vault'
 
 const MAX_UNLOCK_ATTEMPTS = 5
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000
@@ -142,6 +143,7 @@ export const useAuthStore = defineStore('auth', () => {
     clearSessionToken()
     isUnlocked.value = false
     resetUnlockLockout()
+    useVaultStore().clearOnLock()
   }
 
   async function changePassword(oldPassword: string, newPassword: string) {
@@ -154,6 +156,7 @@ export const useAuthStore = defineStore('auth', () => {
     isUnlocked.value = false
     isInitialized.value = false
     resetUnlockLockout()
+    useVaultStore().clearOnLock()
   }
 
   return {

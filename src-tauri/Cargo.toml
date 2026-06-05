@@ -28,7 +28,7 @@ zeroize = { version = "1.7", features = ["derive"] }
 secrecy = "0.8"
 
 # 数据库（SQLCipher）
-sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls"] }
+sqlx = { version = "0.8", default-features = false, features = ["sqlite", "runtime-tokio-rustls", "derive"] }
 libsqlite3-sys = { version = "0.30", features = ["bundled-sqlcipher-vendored-openssl"] }
 hkdf = "0.12"
 

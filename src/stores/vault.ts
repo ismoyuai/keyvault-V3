@@ -104,6 +104,15 @@ export const useVaultStore = defineStore('vault', () => {
     selectedId.value = id
   }
 
+  /** 锁定时清空内存中的元数据（不含解密字段，但遵守「锁定即清空」策略） */
+  function clearOnLock() {
+    entries.value = []
+    selectedId.value = null
+    searchQuery.value = ''
+    isTrashView.value = false
+    isLoading.value = false
+  }
+
   return {
     entries,
     selectedId,
@@ -119,5 +128,6 @@ export const useVaultStore = defineStore('vault', () => {
     purgeEntry,
     emptyTrash,
     selectEntry,
+    clearOnLock,
   }
 })

@@ -229,7 +229,8 @@ mod tests {
                 id TEXT PRIMARY KEY, group_id TEXT, entry_type TEXT NOT NULL,
                 title TEXT NOT NULL, subtitle TEXT, tags TEXT,
                 favorited INTEGER NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0,
-                created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+                created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+                deleted_at INTEGER
             )",
         )
         .execute(&pool)
@@ -240,6 +241,15 @@ mod tests {
                 id TEXT PRIMARY KEY, entry_id TEXT NOT NULL, field_key TEXT NOT NULL,
                 field_type TEXT NOT NULL DEFAULT 'text', enc_value TEXT NOT NULL,
                 is_sensitive INTEGER NOT NULL DEFAULT 1, sort_order INTEGER NOT NULL DEFAULT 0
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE TABLE field_history (
+                id TEXT PRIMARY KEY, entry_id TEXT NOT NULL, field_key TEXT NOT NULL,
+                enc_value TEXT NOT NULL, changed_at INTEGER NOT NULL
             )",
         )
         .execute(&pool)
@@ -322,5 +332,94 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(count.0, 1);
+    }
+
+    #[tokio::test]
+    async fn test_update_transaction_rollback_preserves_data() {
+        let pool = setup_db().await;
+        let entry_id = "entry-1";
+        let now = chrono::Utc::now().timestamp();
+
+        sqlx::query(
+            "INSERT INTO entries (id, entry_type, title, tags, favorited, sort_order, created_at, updated_at)
+             VALUES (?, 'login', 'Original Title', '[]', 0, 0, ?, ?)",
+        )
+        .bind(entry_id)
+        .bind(now)
+        .bind(now)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "INSERT INTO fields (id, entry_id, field_key, field_type, enc_value, is_sensitive, sort_order)
+             VALUES ('f1', ?, 'password', 'password', 'enc', 1, 0)",
+        )
+        .bind(entry_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        {
+            let mut tx = pool.begin().await.unwrap();
+            sqlx::query("UPDATE entries SET title = ? WHERE id = ?")
+                .bind("Hacked Title")
+                .bind(entry_id)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM fields WHERE entry_id = ?")
+                .bind(entry_id)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+            // 故意不 commit，模拟中途失败回滚
+        }
+
+        let title: String = sqlx::query_scalar("SELECT title FROM entries WHERE id = ?")
+            .bind(entry_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(title, "Original Title");
+
+        let field_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM fields WHERE entry_id = ?")
+            .bind(entry_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(field_count, 1);
+    }
+
+    #[tokio::test]
+    async fn test_search_entries_under_50ms_for_1000_rows() {
+        let pool = setup_db().await;
+        let now = chrono::Utc::now().timestamp();
+
+        for i in 0..1000 {
+            let id = format!("entry-{i}");
+            let title = format!("Test Item {i}");
+            sqlx::query(
+                "INSERT INTO entries (id, entry_type, title, tags, favorited, sort_order, created_at, updated_at)
+                 VALUES (?, 'login', ?, '[]', 0, 0, ?, ?)",
+            )
+            .bind(&id)
+            .bind(&title)
+            .bind(now)
+            .bind(now)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        let start = std::time::Instant::now();
+        let results = search_entries(&pool, "Item 42").await.unwrap();
+        let elapsed = start.elapsed();
+
+        assert!(!results.is_empty());
+        assert!(
+            elapsed < std::time::Duration::from_millis(50),
+            "1000 条搜索耗时 {elapsed:?}，超过 50ms 阈值"
+        );
     }
 }

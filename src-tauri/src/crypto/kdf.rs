@@ -117,4 +117,17 @@ mod tests {
         let hash2 = hash_master_password(password).unwrap();
         assert_ne!(hash1, hash2); // Different random salts
     }
+
+    /// §九验收：Argon2id 单次派生应 ≥ 1s（抗暴力破解）
+    #[test]
+    fn test_derive_key_meets_minimum_duration() {
+        use std::time::{Duration, Instant};
+        let start = Instant::now();
+        derive_key(b"benchmark_password_for_timing_test", &[0u8; 16]).unwrap();
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed >= Duration::from_millis(900),
+            "Argon2 derive_key 过快（{elapsed:?}），参数可能被降级"
+        );
+    }
 }

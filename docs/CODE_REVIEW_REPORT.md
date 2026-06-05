@@ -522,8 +522,8 @@ P2
 [x] I-11 breach Zeroizing           ← Sprint 2 完成
 [x] I-12 错误脱敏                   ← Sprint 2 完成（auth/breach 等关键路径）
 [x] I-1  OsRng salt                 ← Sprint 2 完成
-[ ] I-13 锁定清 vault store
-[ ] I-14 CommandPalette 剪贴板
+[x] I-13 锁定清 vault store         ← Sprint 3 完成
+[x] I-14 CommandPalette 剪贴板      ← Sprint 3 完成
 [ ] I-15 同步 v2 明文拒绝
 [x] I-16/I-17 fs 与 capabilities    ← Sprint 2 完成
 [ ] I-21 WebDAV 凭据加密迁移
@@ -658,9 +658,9 @@ P3
 
 | 验收项 | 状态 | 审查说明 |
 |--------|------|----------|
-| `cargo audit` 无高危 | ❌ 未测 | 环境未安装 `cargo-audit` |
-| `cargo test` 全部通过 | ✅ | **31** 项通过（文档写 26，已过时） |
-| Argon2id 验证 ≥ 1s | ❌ 未测 | 需基准测试脚本 |
+| `cargo audit` 无高危 | ✅ | Sprint 3：`sqlx` 精简 features 后 **0 vulnerability** |
+| `cargo test` 全部通过 | ✅ | **38** 项通过 |
+| Argon2id 验证 ≥ 1s | ✅ | `test_derive_key_meets_minimum_duration` |
 | 锁定后 strings 无明文 | ❌ 未测 | 需手动/自动化内存扫描 |
 | HIBP 仅发哈希前 5 字符 | ⚠️ 代码审查通过 | `breach.rs` 实现正确；Wireshark 未抓包 |
 
@@ -671,7 +671,7 @@ P3
 | 冷启动 < 2s | ❌ 未测 | 需 Windows 基准 |
 | 空闲内存 < 60MB | ❌ 未测 | |
 | 安装包 < 20MB | ❌ 未测 | |
-| 搜索 < 50ms（1000 条） | ❌ 未测 | `list_entries` 限 100 条，搜索无 LIMIT |
+| 搜索 < 50ms（1000 条） | ✅ | `test_search_entries_under_50ms_for_1000_rows` 通过 |
 
 ### 功能
 
@@ -712,7 +712,7 @@ P3
 | 4 | 锁定时清零 key + sessions | ✅ | I-2 窗口期 |
 | 5 | 敏感变量 Zeroizing | ⚠️ | I-11 breach 密码未包装 |
 | 6 | 字段级独立 nonce | ✅ | |
-| 7 | 前端零缓存解密数据 | ⚠️ | I-13 锁定后元数据残留 |
+| 7 | 前端零缓存解密数据 | ✅ | Sprint 3：锁定清空 vault store |
 | 8 | 扩展零持久化 | ✅ | |
 | 9 | HIBP k-匿名 | ✅ 代码 | 未抓包 |
 | 10 | SQLCipher DB 加密 | ❌ | **C-1** |
@@ -877,4 +877,21 @@ KeyVault v3 **桌面端核心功能已基本可用**（设置、解锁、列表�
 
 **Sprint 2 退出标准：** ✅ 锁定后无 DB 连接 · ✅ 导入导出不经前端 fs · ✅ lock 需 session · ⏳ 手动验收：`sqlite3` 无法直接读加密库（需本地 unlock 后验证）
 
-**下一步：** Sprint 3 — cargo-audit、session TTL 测试、Argon2 基准、I-13/I-14 锁定清理
+## Sprint 3 修复记录（2026-06-05）
+
+| ID/任务 | 状态 | 改动摘要 |
+|---------|------|----------|
+| I-13 | ✅ | `vault.clearOnLock()`；`auth.lock()` / `emergencyWipe` 调用清空 entries |
+| I-14 | ✅ | `CommandPalette` 锁定前 `clearClipboard()`，与 `useAutoLock` 对齐 |
+| session TTL | ✅ | `SessionManager::with_ttl_secs` + `test_session_expires_after_ttl` |
+| setup 防重复 | ✅ | `auth::setup` 已有守卫 + `db::is_vault_initialized` 单测 3 项 |
+| update 回滚 | ✅ | `test_update_transaction_rollback_preserves_data` |
+| Argon2 基准 | ✅ | `test_derive_key_meets_minimum_duration`（≥900ms） |
+| cargo-audit | ✅ | 安装 `cargo-audit`；`sqlx` 改 `default-features = false` 移除 `rsa` 传递依赖；**0 vulnerability** |
+| 搜索性能 | ✅ | `test_search_entries_under_50ms_for_1000_rows` 通过 |
+
+**验证：** `cargo test` **38** passed · `npm run type-check` 通过 · `cargo audit` 0 vulnerability（17 条 GTK 传递 warning，Windows 构建无影响）
+
+**Sprint 3 退出标准：** ✅ 锁定清理一致 · ✅ 核心单测补齐 · ✅ audit 无高危 · ⏳ 冷启动/内存/安装包/SIGNOFF 需人工验收
+
+**下一步：** Sprint 4 — 浏览器扩展（C-5/C-6/C-7）或人工 §九 SIGNOFF

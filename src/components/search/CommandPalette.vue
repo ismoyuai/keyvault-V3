@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import KvIcon from '@/components/icons/KvIcon.vue'
 import { useVaultStore } from '@/stores/vault'
 import { useAuthStore } from '@/stores/auth'
+import { useClipboard } from '@/composables/useClipboard'
 import { useRouter } from 'vue-router'
 import type { EntryMeta } from '@/types/vault'
 
@@ -21,6 +22,7 @@ const emit = defineEmits<{
 const router = useRouter()
 const vault = useVaultStore()
 const auth = useAuthStore()
+const { clearClipboard } = useClipboard()
 const query = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
 const selectedIndex = ref(0)
@@ -48,6 +50,7 @@ const commands: CommandItem[] = [
     shortcut: 'Ctrl+L',
     icon: 'lock',
     action: async () => {
+      await clearClipboard()
       await auth.lock()
       router.push('/login')
       emit('close')
