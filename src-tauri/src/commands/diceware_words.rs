@@ -1,4 +1,4 @@
-/// EFF 短词表子集（256 词，每词约 8 bit 熵；6 词 ≈ 48 bit）
+/// EFF 短词表子集（416 词；6 词 ≈ 48 bit 熵）
 pub const DICEWARE_WORDS: &[&str] = &[
     "abacus", "abdomen", "abide", "ablaze", "abort", "abrasive", "absorb", "abyss",
     "accent", "acclaim", "accord", "acreage", "across", "actor", "acute", "adhesive",
@@ -53,3 +53,7 @@ pub const DICEWARE_WORDS: &[&str] = &[
     "comedy", "comfort", "comic", "comma", "commit", "common", "compact", "company",
     "compare", "compass", "compete", "compile", "complete", "complex", "compose", "compound",
 ];
+
+pub const DICEWARE_WORD_COUNT: usize = DICEWARE_WORDS.len();
+
+const _: () = assert!(DICEWARE_WORD_COUNT >= 256);

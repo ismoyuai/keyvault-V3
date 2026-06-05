@@ -6,10 +6,12 @@ import PasswordStrength from '@/components/security/PasswordStrength.vue'
 import KvButton from '@/components/ui/KvButton.vue'
 import { security } from '@/bridge/tauri'
 import { useToast } from '@/composables/useToast'
+import { useClipboard } from '@/composables/useClipboard'
 import type { PasswordOptions } from '@/types/vault'
 
 const { length, options, excludeAmbiguous, generate: generateLocal } = usePasswordGenerator()
 const toast = useToast()
+const { copy: copyToClipboard } = useClipboard()
 
 const emit = defineEmits<{
   select: [password: string]
@@ -50,11 +52,11 @@ async function generatePassword() {
 
 async function copyPassword() {
   try {
-    await navigator.clipboard.writeText(password.value)
+    await copyToClipboard(password.value, 'password')
     copied.value = true
     setTimeout(() => { copied.value = false }, 2000)
   } catch {
-    // parent may handle
+    toast.error('复制失败')
   }
 }
 
@@ -126,7 +128,7 @@ generatePassword()
         </label>
       </template>
       <p v-else class="diceware-hint">
-        256 词 EFF 子集，建议 6–12 词（约 48–96 bit 熵）
+        416 词 EFF 子集，建议 6–12 词（约 48–96 bit 熵）
       </p>
     </div>
 

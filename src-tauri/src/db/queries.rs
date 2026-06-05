@@ -9,15 +9,13 @@ use super::schema::{EntryMeta, FieldRow, GroupRow};
 const ENTRY_META_COLS: &str =
     "id, entry_type, title, subtitle, tags, favorited, group_id, updated_at, deleted_at";
 
-/// 同步导出用：含回收站条目
-pub async fn list_all_entries_for_sync(pool: &SqlitePool, limit: i64) -> Result<Vec<EntryMeta>, sqlx::Error> {
+/// 同步导出用：含回收站条目（全量，无上限）
+pub async fn list_all_entries_for_sync(pool: &SqlitePool) -> Result<Vec<EntryMeta>, sqlx::Error> {
     sqlx::query_as::<_, EntryMeta>(&format!(
         "SELECT {ENTRY_META_COLS}
          FROM entries
-         ORDER BY updated_at DESC
-         LIMIT ?",
+         ORDER BY updated_at DESC",
     ))
-    .bind(limit)
     .fetch_all(pool)
     .await
 }

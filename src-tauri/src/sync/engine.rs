@@ -150,6 +150,14 @@ mod tests {
     }
 
     #[test]
+    fn test_merge_entries_equal_timestamp_keeps_local() {
+        let local = vec![sample_entry("a", "Local", 100)];
+        let remote = vec![sample_entry("a", "Remote", 100)];
+        let merged = merge_entries(local, remote);
+        assert_eq!(merged[0].title, "Local");
+    }
+
+    #[test]
     fn test_encrypt_decrypt_roundtrip() {
         let key = [0x42u8; 32];
         let entries = vec![sample_entry("x", "Secret", 1)];

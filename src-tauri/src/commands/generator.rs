@@ -24,7 +24,7 @@ const AMBIGUOUS_UPPER: &str = "IO";
 const AMBIGUOUS_LOWER: &str = "l";
 const AMBIGUOUS_NUMS: &str = "01";
 
-use super::diceware_words::DICEWARE_WORDS;
+use super::diceware_words::{DICEWARE_WORDS, DICEWARE_WORD_COUNT};
 
 #[tauri::command]
 pub async fn generate_password(
@@ -108,7 +108,17 @@ pub async fn generate_password(
 fn generate_diceware(word_count: usize) -> Result<String, String> {
     let mut rng = rand::thread_rng();
     let words: Vec<&str> = (0..word_count)
-        .map(|_| DICEWARE_WORDS[rng.gen_range(0..DICEWARE_WORDS.len())])
+        .map(|_| DICEWARE_WORDS[rng.gen_range(0..DICEWARE_WORD_COUNT)])
         .collect();
     Ok(words.join("-"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn diceware_word_count_at_least_256() {
+        assert!(DICEWARE_WORD_COUNT >= 256);
+    }
 }

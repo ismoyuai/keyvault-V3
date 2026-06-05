@@ -14,6 +14,7 @@ const KEY_USERNAME: &str = "sync_webdav_username";
 const KEY_PASSWORD: &str = "sync_webdav_password";
 const KEY_DEVICE_ID: &str = "sync_device_id";
 const KEY_LAST_SYNC: &str = "sync_last_sync_time";
+const ENC_CREDENTIAL_PREFIX: &str = "enc:";
 
 macro_rules! audit_log {
     ($db:expr, $action:expr) => {
@@ -63,7 +64,23 @@ pub struct SyncStatus {
     pub last_local_sync: Option<i64>,
 }
 
-async fn load_webdav_config(state: &AppState) -> Result<WebDavConfig, String> {
+fn encrypt_sync_credential(key: &[u8; 32], plaintext: &str) -> Result<String, String> {
+    let ciphertext = cipher::encrypt_field(key, plaintext.as_bytes()).map_err(|e| e.to_string())?;
+    Ok(format!("{ENC_CREDENTIAL_PREFIX}{ciphertext}"))
+}
+
+fn decrypt_sync_credential(key: &[u8; 32], stored: &str) -> Result<String, String> {
+    if let Some(ciphertext) = stored.strip_prefix(ENC_CREDENTIAL_PREFIX) {
+        let decrypted = cipher::decrypt_field(key, ciphertext).map_err(|e| e.to_string())?;
+        String::from_utf8(decrypted.to_vec())
+            .map_err(|_| "WebDAV 凭据解密失败，请重新保存同步配置".to_string())
+    } else {
+        // 兼容旧版明文存储
+        Ok(stored.to_string())
+    }
+}
+
+async fn load_webdav_config(state: &AppState, key: &[u8; 32]) -> Result<WebDavConfig, String> {
     let url = queries::get_config(&state.db, KEY_URL)
         .await
         .map_err(|e| e.to_string())?
@@ -73,10 +90,11 @@ async fn load_webdav_config(state: &AppState) -> Result<WebDavConfig, String> {
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
-    let password = queries::get_config(&state.db, KEY_PASSWORD)
+    let stored_password = queries::get_config(&state.db, KEY_PASSWORD)
         .await
         .map_err(|e| e.to_string())?
-        .unwrap_or_default();
+        .ok_or("请先配置 WebDAV 同步")?;
+    let password = decrypt_sync_credential(key, &stored_password)?;
     Ok(WebDavConfig {
         url,
         username,
@@ -99,7 +117,7 @@ async fn get_or_create_device_id(state: &AppState) -> Result<String, String> {
 }
 
 async fn export_sync_entries(state: &AppState, key: &[u8; 32]) -> Result<Vec<SyncEntry>, String> {
-    let entries = queries::list_all_entries_for_sync(&state.db, 10_000)
+    let entries = queries::list_all_entries_for_sync(&state.db)
         .await
         .map_err(|e| e.to_string())?;
     let groups = queries::list_groups(&state.db)
@@ -329,7 +347,10 @@ pub async fn set_sync_config(
         .await
         .map_err(|e| e.to_string())?;
     if !input.password.is_empty() {
-        queries::set_config(&state.db, KEY_PASSWORD, &input.password)
+        let key_guard = state.encryption_key.read().await;
+        let key = key_guard.as_ref().ok_or("请先解锁密码管理器")?;
+        let encrypted = encrypt_sync_credential(key, &input.password)?;
+        queries::set_config(&state.db, KEY_PASSWORD, &encrypted)
             .await
             .map_err(|e| e.to_string())?;
     }
@@ -347,7 +368,9 @@ pub async fn test_webdav_connection(
     if !state.sessions.validate(&session_token).await {
         return Err("会话已过期".to_string());
     }
-    let config = load_webdav_config(&state).await?;
+    let key_guard = state.encryption_key.read().await;
+    let key = key_guard.as_ref().ok_or("请先解锁密码管理器")?;
+    let config = load_webdav_config(&state, key).await?;
     webdav::test_connection(&config).await
 }
 
@@ -363,19 +386,23 @@ pub async fn sync_push(
     let key_guard = state.encryption_key.read().await;
     let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
 
-    let config = load_webdav_config(&state).await?;
+    let config = load_webdav_config(&state, key).await?;
     let device_id = get_or_create_device_id(&state).await?;
 
     let local_entries = export_sync_entries(&state, key).await?;
 
-    let merged_entries = if let Ok(Some(remote_content)) = webdav::download(&config, REMOTE_PATH).await
-    {
-        match engine::deserialize_payload(key, &remote_content) {
-            Ok(remote_payload) => engine::merge_entries(local_entries.clone(), remote_payload.data.entries),
-            Err(_) => local_entries.clone(),
+    let merged_entries = match webdav::download(&config, REMOTE_PATH).await {
+        Ok(Some(remote_content)) => {
+            let remote_payload = engine::deserialize_payload(key, &remote_content).map_err(|e| {
+                format!(
+                    "无法解密远程同步文件，已中止上传以防覆盖远程数据。若刚修改过主密码，请在所有设备用新密码重新推送。详情: {}",
+                    e
+                )
+            })?;
+            engine::merge_entries(local_entries.clone(), remote_payload.data.entries)
         }
-    } else {
-        local_entries.clone()
+        Ok(None) => local_entries.clone(),
+        Err(e) => return Err(e),
     };
 
     let payload = engine::build_payload(&device_id, merged_entries)?;
@@ -408,7 +435,7 @@ pub async fn sync_pull(
     let key_guard = state.encryption_key.read().await;
     let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
 
-    let config = load_webdav_config(&state).await?;
+    let config = load_webdav_config(&state, key).await?;
     let content = webdav::download(&config, REMOTE_PATH).await?;
 
     let Some(content) = content else {
@@ -428,6 +455,7 @@ pub async fn sync_pull(
             .await
             .map_err(|e| e.to_string())?;
 
+        // 与 merge_entries 一致：updated_at 相等时保留本地
         let should_apply = match local_updated {
             None => true,
             Some(local_ts) => remote_entry.updated_at > local_ts,
@@ -461,7 +489,9 @@ pub async fn get_sync_status(
         return Err("会话已过期".to_string());
     }
 
-    let config = load_webdav_config(&state).await?;
+    let key_guard = state.encryption_key.read().await;
+    let key = key_guard.as_ref().ok_or("请先解锁密码管理器")?;
+    let config = load_webdav_config(&state, key).await?;
     let last_remote = webdav::get_last_modified(&config, REMOTE_PATH).await.ok().flatten();
     let last_local = queries::get_config(&state.db, KEY_LAST_SYNC)
         .await
@@ -472,4 +502,25 @@ pub async fn get_sync_status(
         last_remote_sync: last_remote,
         last_local_sync: last_local,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sync_credential_roundtrip() {
+        let key = [0x11u8; 32];
+        let encrypted = encrypt_sync_credential(&key, "nas-secret").unwrap();
+        assert!(encrypted.starts_with(ENC_CREDENTIAL_PREFIX));
+        let decrypted = decrypt_sync_credential(&key, &encrypted).unwrap();
+        assert_eq!(decrypted, "nas-secret");
+    }
+
+    #[test]
+    fn sync_credential_legacy_plaintext() {
+        let key = [0x11u8; 32];
+        let decrypted = decrypt_sync_credential(&key, "legacy-plain").unwrap();
+        assert_eq!(decrypted, "legacy-plain");
+    }
 }
