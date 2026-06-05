@@ -524,15 +524,15 @@ P2
 [x] I-1  OsRng salt                 ← Sprint 2 完成
 [x] I-13 锁定清 vault store         ← Sprint 3 完成
 [x] I-14 CommandPalette 剪贴板      ← Sprint 3 完成
-[ ] I-15 同步 v2 明文拒绝
+[x] I-15 同步 v2 明文拒绝
 [x] I-16/I-17 fs 与 capabilities    ← Sprint 2 完成
-[ ] I-21 WebDAV 凭据加密迁移
+[x] I-21 WebDAV 凭据加密迁移
 
 P3
-[ ] I-2  lock 原子性
-[ ] I-3  session 读锁
-[ ] I-4  TTL 测试
-[ ] I-7  元数据命令 key 检查
+[x] I-2  lock 原子性
+[x] I-3  session 读锁
+[x] I-4  TTL 测试
+[x] I-7  元数据命令 key 检查
 [ ] M-*  Minor 项按需处理
 ```
 
@@ -883,6 +883,11 @@ KeyVault v3 **桌面端核心功能已基本可用**（设置、解锁、列表�
 |---------|------|----------|
 | I-13 | ✅ | `vault.clearOnLock()`；`auth.lock()` / `emergencyWipe` 调用清空 entries |
 | I-14 | ✅ | `CommandPalette` 锁定前 `clearClipboard()`，与 `useAutoLock` 对齐 |
+| I-15 | ✅ | 同步拒绝明文 v2：`sync/engine.rs` 不再回退 `serde_json::from_str` |
+| I-21 | ✅ | WebDAV 凭据读取时一次性迁移：明文 -> `enc:` 并写回 DB |
+| I-2 | ✅ | `state.lock()` 先销毁 session 再清 key，减少锁定窗口不一致 |
+| I-3 | ✅ | `SessionManager::validate()` 读路径先用读锁，刷新 TTL 再升级写锁 |
+| I-7 | ✅ | `list_entries/search_entries/list_trash_entries` 增加解锁态检查 |
 | session TTL | ✅ | `SessionManager::with_ttl_secs` + `test_session_expires_after_ttl` |
 | setup 防重复 | ✅ | `auth::setup` 已有守卫 + `db::is_vault_initialized` 单测 3 项 |
 | update 回滚 | ✅ | `test_update_transaction_rollback_preserves_data` |
@@ -890,7 +895,7 @@ KeyVault v3 **桌面端核心功能已基本可用**（设置、解锁、列表�
 | cargo-audit | ✅ | 安装 `cargo-audit`；`sqlx` 改 `default-features = false` 移除 `rsa` 传递依赖；**0 vulnerability** |
 | 搜索性能 | ✅ | `test_search_entries_under_50ms_for_1000_rows` 通过 |
 
-**验证：** `cargo test` **38** passed · `npm run type-check` 通过 · `cargo audit` 0 vulnerability（17 条 GTK 传递 warning，Windows 构建无影响）
+**验证：** `cargo test` **39** passed · `npm run type-check` 通过 · `cargo audit` 0 vulnerability（GTK 传递 warning 不影响）
 
 **Sprint 3 退出标准：** ✅ 锁定清理一致 · ✅ 核心单测补齐 · ✅ audit 无高危 · ⏳ 冷启动/内存/安装包/SIGNOFF 需人工验收
 

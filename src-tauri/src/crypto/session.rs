@@ -44,15 +44,31 @@ impl SessionManager {
     }
 
     pub async fn validate(&self, token: &str) -> bool {
+        // I-3：避免 validate 的默认路径持有写锁
+        let created_at = {
+            let sessions = self.sessions.read().await;
+            sessions.get(token).copied()
+        };
+
+        let Some(created_at) = created_at else {
+            return false;
+        };
+
+        if created_at.elapsed().unwrap_or_default() > self.ttl {
+            // 已过期：升级为写锁清理
+            let mut sessions = self.sessions.write().await;
+            sessions.remove(token);
+            return false;
+        }
+
+        // 未过期：升级为写锁刷新滑动窗口时间
         let mut sessions = self.sessions.write().await;
         match sessions.get_mut(token) {
             Some(created_at) => {
-                if created_at.elapsed().unwrap_or_default() > self.ttl
-                {
+                if created_at.elapsed().unwrap_or_default() > self.ttl {
                     sessions.remove(token);
                     false
                 } else {
-                    // 滑动窗口：刷新时间
                     *created_at = SystemTime::now();
                     true
                 }

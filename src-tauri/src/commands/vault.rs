@@ -106,6 +106,10 @@ pub async fn list_entries(
         return Err("会话已过期".to_string());
     }
 
+    // I-7：元数据命令必须校验解锁态，避免锁定后仍返回条目元数据
+    let key_guard = state.encryption_key.read().await;
+    key_guard.as_ref().ok_or("密码管理器已锁定")?;
+
     let db = state.db_pool().await?;
     let rows = queries::list_entries(&db, 100, 0)
         .await
@@ -127,6 +131,10 @@ pub async fn search_entries(
     if !state.sessions.validate(&session_token).await {
         return Err("会话已过期".to_string());
     }
+
+    // I-7：元数据命令必须校验解锁态，避免锁定后仍返回条目元数据
+    let key_guard = state.encryption_key.read().await;
+    key_guard.as_ref().ok_or("密码管理器已锁定")?;
 
     let db = state.db_pool().await?;
     let rows = queries::search_entries(&db, &query)
@@ -407,6 +415,10 @@ pub async fn list_trash_entries(
     if !state.sessions.validate(&session_token).await {
         return Err("会话已过期".to_string());
     }
+
+    // I-7：元数据命令必须校验解锁态，避免锁定后仍返回条目元数据
+    let key_guard = state.encryption_key.read().await;
+    key_guard.as_ref().ok_or("密码管理器已锁定")?;
 
     let db = state.db_pool().await?;
     let rows = queries::list_trash_entries(&db, 200)

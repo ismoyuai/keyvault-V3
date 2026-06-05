@@ -104,20 +104,18 @@ pub fn serialize_encrypted(key: &[u8; 32], payload: &SyncPayload) -> Result<Stri
     serde_json::to_string(&blob).map_err(|e| e.to_string())
 }
 
-/// 解密同步文件；兼容 v2 明文 JSON
+/// 解密同步文件（生产拒绝明文 v2 降级）
 pub fn deserialize_payload(key: &[u8; 32], content: &str) -> Result<SyncPayload, String> {
-    if let Ok(blob) = serde_json::from_str::<EncryptedSyncFile>(content) {
-        if blob.version >= SYNC_ENCRYPTED_VERSION {
-            let decrypted = cipher::decrypt_field(key, &blob.ciphertext).map_err(|e| e.to_string())?;
-            let payload: SyncPayload =
-                serde_json::from_slice(&decrypted).map_err(|e| format!("解密数据解析失败: {}", e))?;
-            verify_payload(&payload)?;
-            return Ok(payload);
-        }
+    let blob = serde_json::from_str::<EncryptedSyncFile>(content)
+        .map_err(|_| "远程数据不是 v3 加密格式（拒绝明文 v2 回退）".to_string())?;
+
+    if blob.version != SYNC_ENCRYPTED_VERSION {
+        return Err("远程同步文件版本不支持".to_string());
     }
 
+    let decrypted = cipher::decrypt_field(key, &blob.ciphertext).map_err(|e| e.to_string())?;
     let payload: SyncPayload =
-        serde_json::from_str(content).map_err(|e| format!("远程数据解析失败: {}", e))?;
+        serde_json::from_slice(&decrypted).map_err(|e| format!("解密数据解析失败: {}", e))?;
     verify_payload(&payload)?;
     Ok(payload)
 }
@@ -165,5 +163,19 @@ mod tests {
         let encrypted = serialize_encrypted(&key, &payload).unwrap();
         let restored = deserialize_payload(&key, &encrypted).unwrap();
         assert_eq!(restored.data.entries[0].title, "Secret");
+    }
+
+    #[test]
+    fn test_reject_plaintext_v2_sync_payload() {
+        let key = [0x42u8; 32];
+        let entries = vec![sample_entry("x", "Secret", 1)];
+        let payload = build_payload("device-1", entries).unwrap();
+        let plaintext = serde_json::to_string(&payload).unwrap();
+
+        let err = deserialize_payload(&key, &plaintext).unwrap_err();
+        assert!(
+            err.contains("拒绝") || err.contains("加密"),
+            "unexpected error: {err}"
+        );
     }
 }

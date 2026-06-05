@@ -70,14 +70,13 @@ fn encrypt_sync_credential(key: &[u8; 32], plaintext: &str) -> Result<String, St
 }
 
 fn decrypt_sync_credential(key: &[u8; 32], stored: &str) -> Result<String, String> {
-    if let Some(ciphertext) = stored.strip_prefix(ENC_CREDENTIAL_PREFIX) {
-        let decrypted = cipher::decrypt_field(key, ciphertext).map_err(|e| e.to_string())?;
-        String::from_utf8(decrypted.to_vec())
-            .map_err(|_| "WebDAV 凭据解密失败，请重新保存同步配置".to_string())
-    } else {
-        // 兼容旧版明文存储
-        Ok(stored.to_string())
-    }
+    let ciphertext = stored
+        .strip_prefix(ENC_CREDENTIAL_PREFIX)
+        .ok_or_else(|| "检测到旧版明文 WebDAV 凭据，已标记需迁移".to_string())?;
+
+    let decrypted = cipher::decrypt_field(key, ciphertext).map_err(|e| e.to_string())?;
+    String::from_utf8(decrypted.to_vec())
+        .map_err(|_| "WebDAV 凭据解密失败，请重新保存同步配置".to_string())
 }
 
 async fn load_webdav_config(state: &AppState, key: &[u8; 32]) -> Result<WebDavConfig, String> {
@@ -95,7 +94,18 @@ async fn load_webdav_config(state: &AppState, key: &[u8; 32]) -> Result<WebDavCo
         .await
         .map_err(|e| e.to_string())?
         .ok_or("请先配置 WebDAV 同步")?;
-    let password = decrypt_sync_credential(key, &stored_password)?;
+
+    // I-21：迁移旧版明文凭据为 `enc:` 格式；生产不再长期兼容明文回退
+    let password = if stored_password.starts_with(ENC_CREDENTIAL_PREFIX) {
+        decrypt_sync_credential(key, &stored_password)?
+    } else {
+        let encrypted = encrypt_sync_credential(key, &stored_password)?;
+        queries::set_config(&db, KEY_PASSWORD, &encrypted)
+            .await
+            .map_err(|e| e.to_string())?;
+        stored_password
+    };
+
     Ok(WebDavConfig {
         url,
         username,
@@ -526,10 +536,39 @@ mod tests {
         assert_eq!(decrypted, "nas-secret");
     }
 
-    #[test]
-    fn sync_credential_legacy_plaintext() {
+    #[tokio::test]
+    async fn sync_credential_legacy_plaintext_migrates_to_enc() {
+        use crate::db;
+
         let key = [0x11u8; 32];
-        let decrypted = decrypt_sync_credential(&key, "legacy-plain").unwrap();
+
+        // 构造一个已迁移的临时数据库
+        let dir = std::env::temp_dir().join(format!(
+            "kv-sync-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let db_path = db::db_file_path(&dir);
+        let pool = db::open_encrypted_pool(&db_path, &key).await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        // 注入到 AppState 以供 load_webdav_config 读取
+        let state = AppState::new(dir);
+        *state.db.write().await = Some(pool.clone());
+
+        // 写入旧版明文配置
+        queries::set_config(&pool, KEY_URL, "https://example.com").await.unwrap();
+        queries::set_config(&pool, KEY_USERNAME, "u").await.unwrap();
+        queries::set_config(&pool, KEY_PASSWORD, "legacy-plain").await.unwrap();
+
+        let config = load_webdav_config(&state, &key).await.unwrap();
+        assert_eq!(config.password, "legacy-plain");
+
+        // 再次读取：应该已经迁移为 enc: 前缀
+        let stored = queries::get_config(&pool, KEY_PASSWORD).await.unwrap().unwrap();
+        assert!(stored.starts_with(ENC_CREDENTIAL_PREFIX));
+        let decrypted = decrypt_sync_credential(&key, &stored).unwrap();
         assert_eq!(decrypted, "legacy-plain");
     }
 }

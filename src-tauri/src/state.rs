@@ -101,11 +101,12 @@ impl AppState {
     }
 
     pub async fn lock(&self) {
+        self.sessions.destroy_all().await;
+
+        // 优先销毁 session，避免出现“session 仍有效但 key 已清空”的短暂窗口
         let mut key = self.encryption_key.write().await;
         *key = None;
         drop(key);
-
-        self.sessions.destroy_all().await;
 
         let mut salt = self.kdf_salt.write().await;
         *salt = None;
