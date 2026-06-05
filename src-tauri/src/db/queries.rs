@@ -20,6 +20,17 @@ pub async fn list_all_entries_for_sync(pool: &SqlitePool) -> Result<Vec<EntryMet
     .await
 }
 
+/// 导出用：所有未删除条目（无上限）
+pub async fn list_all_active_entries(pool: &SqlitePool) -> Result<Vec<EntryMeta>, sqlx::Error> {
+    sqlx::query_as::<_, EntryMeta>(&format!(
+        "SELECT {ENTRY_META_COLS}
+         FROM entries WHERE deleted_at IS NULL
+         ORDER BY favorited DESC, updated_at DESC",
+    ))
+    .fetch_all(pool)
+    .await
+}
+
 pub async fn list_entries(pool: &SqlitePool, limit: i64, offset: i64) -> Result<Vec<EntryMeta>, sqlx::Error> {
     sqlx::query_as::<_, EntryMeta>(&format!(
         "SELECT {ENTRY_META_COLS}

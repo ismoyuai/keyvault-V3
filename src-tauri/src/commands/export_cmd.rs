@@ -1,9 +1,10 @@
-// src-tauri/src/commands/export_cmd.rs
-use tauri::State;
-use serde::{Serialize, Deserialize};
-use crate::state::AppState;
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, State};
+use tauri_plugin_dialog::DialogExt;
+
 use crate::crypto::cipher;
 use crate::db::queries;
+use crate::state::AppState;
 
 #[derive(Serialize)]
 struct ExportEntry {
@@ -31,45 +32,33 @@ struct ExportData {
     entries: Vec<ExportEntry>,
 }
 
-#[tauri::command]
-pub async fn export_vault(
-    state: State<'_, AppState>,
-    session_token: String,
-) -> Result<String, String> {
-    if !state.sessions.validate(&session_token).await {
-        return Err("会话已过期".to_string());
-    }
+async fn build_export_json(state: &AppState, key: &[u8; 32]) -> Result<String, String> {
+    let db = state.db_pool().await?;
 
-    let key_guard = state.encryption_key.read().await;
-    let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
-
-    let entries = queries::list_entries(&state.db, 100, 0)
+    let entries = queries::list_all_active_entries(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|_| "导出失败".to_string())?;
 
-    let groups = queries::list_groups(&state.db)
+    let groups = queries::list_groups(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|_| "导出失败".to_string())?;
 
-    let group_map: std::collections::HashMap<String, String> = groups
-        .into_iter()
-        .map(|g| (g.id, g.name))
-        .collect();
+    let group_map: std::collections::HashMap<String, String> =
+        groups.into_iter().map(|g| (g.id, g.name)).collect();
 
     let mut export_entries = Vec::new();
 
     for entry in entries {
-        let fields = queries::get_entry_fields(&state.db, &entry.id)
+        let fields = queries::get_entry_fields(&db, &entry.id)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|_| "导出失败".to_string())?;
 
         let mut export_fields = Vec::new();
         for field in fields {
             let value = if field.is_sensitive != 0 {
-                let decrypted = cipher::decrypt_field(key, &field.enc_value)
-                    .map_err(|e| e.to_string())?;
-                String::from_utf8(decrypted.to_vec())
-                    .map_err(|_| "解码失败".to_string())?
+                let decrypted =
+                    cipher::decrypt_field(key, &field.enc_value).map_err(|_| "导出失败".to_string())?;
+                String::from_utf8(decrypted.to_vec()).map_err(|_| "解码失败".to_string())?
             } else {
                 field.enc_value
             };
@@ -98,7 +87,64 @@ pub async fn export_vault(
         entries: export_entries,
     };
 
-    serde_json::to_string_pretty(&data).map_err(|e| e.to_string())
+    serde_json::to_string_pretty(&data).map_err(|_| "导出失败".to_string())
+}
+
+#[tauri::command]
+pub async fn export_vault(
+    state: State<'_, AppState>,
+    session_token: String,
+    format: String,
+) -> Result<String, String> {
+    if !state.sessions.validate(&session_token).await {
+        return Err("会话已过期".to_string());
+    }
+
+    if format != "json" {
+        return Err("不支持的导出格式".to_string());
+    }
+
+    let key_guard = state.encryption_key.read().await;
+    let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
+
+    build_export_json(&state, key).await
+}
+
+#[tauri::command]
+pub async fn export_vault_to_file(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    session_token: String,
+    format: String,
+) -> Result<bool, String> {
+    if !state.sessions.validate(&session_token).await {
+        return Err("会话已过期".to_string());
+    }
+
+    if format != "json" {
+        return Err("不支持的导出格式".to_string());
+    }
+
+    let key_guard = state.encryption_key.read().await;
+    let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
+
+    let file_path = app
+        .dialog()
+        .file()
+        .add_filter("JSON", &["json"])
+        .blocking_save_file();
+
+    let Some(file_path) = file_path else {
+        return Ok(false);
+    };
+
+    let path = file_path
+        .into_path()
+        .map_err(|_| "无效的文件路径".to_string())?;
+    let json = build_export_json(&state, key).await?;
+    std::fs::write(&path, json).map_err(|_| "写入文件失败".to_string())?;
+
+    Ok(true)
 }
 
 #[derive(Deserialize)]
@@ -125,23 +171,21 @@ struct ImportData {
     entries: Vec<ImportEntry>,
 }
 
-#[tauri::command]
-pub async fn import_vault(
-    state: State<'_, AppState>,
-    session_token: String,
-    data: String,
+async fn import_vault_data(
+    state: &AppState,
+    key: &[u8; 32],
+    data: &str,
+    format: &str,
 ) -> Result<usize, String> {
-    if !state.sessions.validate(&session_token).await {
-        return Err("会话已过期".to_string());
+    if format != "json" {
+        return Err("不支持的导入格式".to_string());
     }
 
-    let key_guard = state.encryption_key.read().await;
-    let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
+    let data: ImportData =
+        serde_json::from_str(data).map_err(|_| "JSON 解析失败，请检查文件格式".to_string())?;
 
-    let data: ImportData = serde_json::from_str(&data)
-        .map_err(|e| format!("JSON 解析失败: {}", e))?;
-
-    let mut count = 0;
+    let db = state.db_pool().await?;
+    let mut count = 0usize;
 
     for import_entry in data.entries {
         let entry_id = uuid::Uuid::new_v4().to_string();
@@ -149,17 +193,19 @@ pub async fn import_vault(
         let tags_json = import_entry.tags.unwrap_or_else(|| "[]".to_string());
 
         let group_id = if let Some(ref name) = import_entry.group_name {
-            let groups = queries::list_groups(&state.db)
+            let groups = queries::list_groups(&db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|_| "导入失败".to_string())?;
             groups.iter().find(|g| &g.name == name).map(|g| g.id.clone())
         } else {
             None
         };
 
+        let mut tx = db.begin().await.map_err(|_| "导入失败".to_string())?;
+
         sqlx::query(
             "INSERT INTO entries (id, group_id, entry_type, title, subtitle, tags, favorited, sort_order, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)"
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)",
         )
         .bind(&entry_id)
         .bind(&group_id)
@@ -170,24 +216,27 @@ pub async fn import_vault(
         .bind(import_entry.favorited.unwrap_or(false) as i32)
         .bind(now)
         .bind(now)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|_| "导入失败".to_string())?;
 
         for (i, import_field) in import_entry.fields.iter().enumerate() {
             let is_sensitive = import_field.is_sensitive.unwrap_or(true);
             let enc_value = if is_sensitive {
                 cipher::encrypt_field(key, import_field.value.as_bytes())
-                    .map_err(|e| e.to_string())?
+                    .map_err(|_| "导入失败".to_string())?
             } else {
                 import_field.value.clone()
             };
             let field_id = uuid::Uuid::new_v4().to_string();
-            let field_type = import_field.field_type.clone().unwrap_or_else(|| "text".to_string());
+            let field_type = import_field
+                .field_type
+                .clone()
+                .unwrap_or_else(|| "text".to_string());
 
             sqlx::query(
                 "INSERT INTO fields (id, entry_id, field_key, field_type, enc_value, is_sensitive, sort_order)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)"
+                 VALUES (?, ?, ?, ?, ?, ?, ?)",
             )
             .bind(&field_id)
             .bind(&entry_id)
@@ -196,13 +245,63 @@ pub async fn import_vault(
             .bind(&enc_value)
             .bind(is_sensitive as i32)
             .bind(i as i32)
-            .execute(&state.db)
+            .execute(&mut *tx)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|_| "导入失败".to_string())?;
         }
 
+        tx.commit().await.map_err(|_| "导入失败".to_string())?;
         count += 1;
     }
 
     Ok(count)
+}
+
+#[tauri::command]
+pub async fn import_vault(
+    state: State<'_, AppState>,
+    session_token: String,
+    data: String,
+    format: String,
+) -> Result<usize, String> {
+    if !state.sessions.validate(&session_token).await {
+        return Err("会话已过期".to_string());
+    }
+
+    let key_guard = state.encryption_key.read().await;
+    let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
+
+    import_vault_data(&state, key, &data, &format).await
+}
+
+#[tauri::command]
+pub async fn import_vault_from_file(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    session_token: String,
+    format: String,
+) -> Result<usize, String> {
+    if !state.sessions.validate(&session_token).await {
+        return Err("会话已过期".to_string());
+    }
+
+    let key_guard = state.encryption_key.read().await;
+    let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
+
+    let file_path = app
+        .dialog()
+        .file()
+        .add_filter("JSON", &["json"])
+        .blocking_pick_file();
+
+    let Some(file_path) = file_path else {
+        return Ok(0);
+    };
+
+    let path = file_path
+        .into_path()
+        .map_err(|_| "无效的文件路径".to_string())?;
+    let content = std::fs::read_to_string(&path).map_err(|_| "读取文件失败".to_string())?;
+
+    import_vault_data(&state, key, &content, &format).await
 }

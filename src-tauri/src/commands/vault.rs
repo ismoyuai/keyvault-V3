@@ -106,7 +106,8 @@ pub async fn list_entries(
         return Err("会话已过期".to_string());
     }
 
-    let rows = queries::list_entries(&state.db, 100, 0)
+    let db = state.db_pool().await?;
+    let rows = queries::list_entries(&db, 100, 0)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
@@ -127,7 +128,8 @@ pub async fn search_entries(
         return Err("会话已过期".to_string());
     }
 
-    let rows = queries::search_entries(&state.db, &query)
+    let db = state.db_pool().await?;
+    let rows = queries::search_entries(&db, &query)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
@@ -151,7 +153,8 @@ pub async fn get_entry_secrets(
     let key_guard = state.encryption_key.read().await;
     let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
 
-    let rows = queries::get_entry_fields(&state.db, &entry_id)
+    let db = state.db_pool().await?;
+    let rows = queries::get_entry_fields(&db, &entry_id)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
@@ -175,7 +178,7 @@ pub async fn get_entry_secrets(
     }
 
     // 审计日志：查看条目
-    audit_log!(&state.db, "view", Some(&entry_id));
+    audit_log!(&db, "view", Some(&entry_id));
 
     Ok(EntrySecrets { fields })
 }
@@ -194,11 +197,16 @@ pub async fn create_entry(
     let key_guard = state.encryption_key.read().await;
     let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
 
+    let db = state.db_pool().await?;
     let entry_id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().timestamp();
     let tags_json = serde_json::to_string(&input.tags).unwrap_or_default();
 
-    // 插入条目元数据
+    let mut tx = db.begin().await.map_err(|e| {
+        tracing::error!("操作失败: {:?}", e);
+        "操作失败，请重试".to_string()
+    })?;
+
     sqlx::query(
         "INSERT INTO entries (id, group_id, entry_type, title, subtitle, tags, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -211,20 +219,18 @@ pub async fn create_entry(
     .bind(&tags_json)
     .bind(now)
     .bind(now)
-    .execute(&state.db)
+    .execute(&mut *tx)
     .await
     .map_err(|e| {
         tracing::error!("操作失败: {:?}", e);
         "操作失败，请重试".to_string()
     })?;
 
-    // 插入加密字段
     for (i, field) in input.fields.iter().enumerate() {
-        let enc_value =
-            cipher::encrypt_field(key, field.value.as_bytes()).map_err(|e| {
-                tracing::error!("操作失败: {:?}", e);
-                "操作失败，请重试".to_string()
-            })?;
+        let enc_value = cipher::encrypt_field(key, field.value.as_bytes()).map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
         let field_id = uuid::Uuid::new_v4().to_string();
 
         sqlx::query(
@@ -238,13 +244,18 @@ pub async fn create_entry(
         .bind(&enc_value)
         .bind(field.is_sensitive as i32)
         .bind(i as i32)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
             "操作失败，请重试".to_string()
         })?;
     }
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!("操作失败: {:?}", e);
+        "操作失败，请重试".to_string()
+    })?;
 
     Ok(entry_id)
 }
@@ -267,7 +278,19 @@ pub async fn update_entry(
     let now = chrono::Utc::now().timestamp();
     let tags_json = serde_json::to_string(&input.tags).unwrap_or_default();
 
-    // 更新元数据
+    let db = state.db_pool().await?;
+    let old_fields = queries::get_entry_fields(&db, &entry_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
+
+    let mut tx = db.begin().await.map_err(|e| {
+        tracing::error!("操作失败: {:?}", e);
+        "操作失败，请重试".to_string()
+    })?;
+
     sqlx::query(
         "UPDATE entries SET group_id = ?, entry_type = ?, title = ?, subtitle = ?, tags = ?, updated_at = ?
          WHERE id = ?",
@@ -279,31 +302,23 @@ pub async fn update_entry(
     .bind(&tags_json)
     .bind(now)
     .bind(&entry_id)
-    .execute(&state.db)
+    .execute(&mut *tx)
     .await
     .map_err(|e| {
         tracing::error!("操作失败: {:?}", e);
         "操作失败，请重试".to_string()
     })?;
 
-    // 先查询旧字段用于保存历史
-    let old_fields = queries::get_entry_fields(&state.db, &entry_id)
-        .await
-        .unwrap_or_default();
-
-    // 删除旧字段
     sqlx::query("DELETE FROM fields WHERE entry_id = ?")
         .bind(&entry_id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
             "操作失败，请重试".to_string()
         })?;
 
-    // 插入新字段并保存历史
     for (i, field) in input.fields.iter().enumerate() {
-        // 保存旧值到历史
         for old in &old_fields {
             if old.field_key == field.field_key {
                 let history_id = uuid::Uuid::new_v4().to_string();
@@ -316,17 +331,19 @@ pub async fn update_entry(
                 .bind(&old.field_key)
                 .bind(&old.enc_value)
                 .bind(now)
-                .execute(&state.db)
+                .execute(&mut *tx)
                 .await
-                .ok();
+                .map_err(|e| {
+                    tracing::error!("操作失败: {:?}", e);
+                    "操作失败，请重试".to_string()
+                })?;
             }
         }
 
-        let enc_value =
-            cipher::encrypt_field(key, field.value.as_bytes()).map_err(|e| {
-                tracing::error!("操作失败: {:?}", e);
-                "操作失败，请重试".to_string()
-            })?;
+        let enc_value = cipher::encrypt_field(key, field.value.as_bytes()).map_err(|e| {
+            tracing::error!("操作失败: {:?}", e);
+            "操作失败，请重试".to_string()
+        })?;
         let field_id = uuid::Uuid::new_v4().to_string();
 
         sqlx::query(
@@ -340,13 +357,18 @@ pub async fn update_entry(
         .bind(&enc_value)
         .bind(field.is_sensitive as i32)
         .bind(i as i32)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
             "操作失败，请重试".to_string()
         })?;
     }
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!("操作失败: {:?}", e);
+        "操作失败，请重试".to_string()
+    })?;
 
     Ok(())
 }
@@ -362,15 +384,16 @@ pub async fn delete_entry(
         return Err("会话已过期".to_string());
     }
 
+    let db = state.db_pool().await?;
     let now = chrono::Utc::now().timestamp();
-    queries::soft_delete_entry(&state.db, &entry_id, now)
+    queries::soft_delete_entry(&db, &entry_id, now)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
             "操作失败，请重试".to_string()
         })?;
 
-    audit_log!(&state.db, "soft_delete", Some(&entry_id));
+    audit_log!(&db, "soft_delete", Some(&entry_id));
 
     Ok(())
 }
@@ -385,7 +408,8 @@ pub async fn list_trash_entries(
         return Err("会话已过期".to_string());
     }
 
-    let rows = queries::list_trash_entries(&state.db, 200)
+    let db = state.db_pool().await?;
+    let rows = queries::list_trash_entries(&db, 200)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
@@ -406,15 +430,16 @@ pub async fn restore_entry(
         return Err("会话已过期".to_string());
     }
 
+    let db = state.db_pool().await?;
     let now = chrono::Utc::now().timestamp();
-    queries::restore_entry(&state.db, &entry_id, now)
+    queries::restore_entry(&db, &entry_id, now)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
             "操作失败，请重试".to_string()
         })?;
 
-    audit_log!(&state.db, "restore", Some(&entry_id));
+    audit_log!(&db, "restore", Some(&entry_id));
 
     Ok(())
 }
@@ -430,14 +455,15 @@ pub async fn purge_entry(
         return Err("会话已过期".to_string());
     }
 
-    queries::purge_entry(&state.db, &entry_id)
+    let db = state.db_pool().await?;
+    queries::purge_entry(&db, &entry_id)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
             "操作失败，请重试".to_string()
         })?;
 
-    audit_log!(&state.db, "purge", Some(&entry_id));
+    audit_log!(&db, "purge", Some(&entry_id));
 
     Ok(())
 }
@@ -452,14 +478,15 @@ pub async fn empty_trash(
         return Err("会话已过期".to_string());
     }
 
-    let count = queries::empty_trash(&state.db)
+    let db = state.db_pool().await?;
+    let count = queries::empty_trash(&db)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);
             "操作失败，请重试".to_string()
         })?;
 
-    audit_log!(&state.db, "empty_trash");
+    audit_log!(&db, "empty_trash");
 
     Ok(count)
 }
@@ -475,11 +502,12 @@ pub async fn toggle_favorite(
         return Err("会话已过期".to_string());
     }
 
+    let db = state.db_pool().await?;
     sqlx::query(
         "UPDATE entries SET favorited = CASE WHEN favorited = 1 THEN 0 ELSE 1 END WHERE id = ? AND deleted_at IS NULL",
     )
     .bind(&entry_id)
-        .execute(&state.db)
+        .execute(&db)
         .await
         .map_err(|e| {
             tracing::error!("操作失败: {:?}", e);

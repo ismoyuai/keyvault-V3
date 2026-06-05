@@ -3,10 +3,7 @@ use serde::{Deserialize, Serialize};
 use tokio::runtime::Runtime;
 
 use crate::commands::native_ext;
-use crate::crypto;
-use crate::db;
 use crate::state::AppState;
-use tokio::sync::RwLock;
 
 #[derive(Deserialize)]
 struct Request {
@@ -41,23 +38,14 @@ enum ResponseData {
 pub fn run() {
     let rt = Runtime::new().expect("无法创建 tokio 运行时");
 
-    let db_path = get_db_path();
-    let pool = rt.block_on(async {
-        db::init_db(&db_path)
-            .await
-            .expect("无法初始化数据库")
-    });
+    let data_dir = dirs::data_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("keyvault");
+    std::fs::create_dir_all(&data_dir).ok();
 
-    let state = AppState {
-        encryption_key: RwLock::new(None),
-        db: pool,
-        sessions: crypto::session::SessionManager::new(),
-        kdf_salt: RwLock::new(None),
-        unlock_failures: std::sync::atomic::AtomicU32::new(0),
-        last_failure_time: std::sync::atomic::AtomicI64::new(0),
-    };
+    let state = AppState::new(data_dir);
 
-    // Native Messaging Host 自身的 session token
+    // Native Messaging Host 自身的 session token（与 GUI 解锁态不共享，见 C-6）
     let host_session_token = rt.block_on(state.sessions.create());
 
     let stdin = io::stdin();
@@ -106,17 +94,25 @@ async fn handle_request(request: &Request, state: &AppState, host_token: &str) -
 
     match request.action.as_str() {
         "get_status" => {
-            if state.encryption_key.read().await.is_some() {
-                ResponseData::Status { status: "connected".to_string() }
+            if state.is_unlocked() {
+                ResponseData::Status {
+                    status: "connected".to_string(),
+                }
             } else {
-                ResponseData::Status { status: "locked".to_string() }
+                ResponseData::Status {
+                    status: "locked".to_string(),
+                }
             }
         }
 
         "find_credentials" => {
             let url = match &request.url {
                 Some(u) => u.clone(),
-                None => return ResponseData::Error { error: "缺少 url 参数".to_string() },
+                None => {
+                    return ResponseData::Error {
+                        error: "缺少 url 参数".to_string(),
+                    }
+                }
             };
 
             match native_ext::find_credentials_by_url(token, &url, state).await {
@@ -125,7 +121,9 @@ async fn handle_request(request: &Request, state: &AppState, host_token: &str) -
                         .iter()
                         .map(|e| serde_json::to_value(e).unwrap())
                         .collect();
-                    ResponseData::Entries { entries: entries_json }
+                    ResponseData::Entries {
+                        entries: entries_json,
+                    }
                 }
                 Err(e) => ResponseData::Error { error: e },
             }
@@ -134,7 +132,11 @@ async fn handle_request(request: &Request, state: &AppState, host_token: &str) -
         "get_entry_for_fill" => {
             let entry_id = match &request.entry_id {
                 Some(id) => id.clone(),
-                None => return ResponseData::Error { error: "缺少 entryId 参数".to_string() },
+                None => {
+                    return ResponseData::Error {
+                        error: "缺少 entryId 参数".to_string(),
+                    }
+                }
             };
 
             match native_ext::get_entry_for_fill(token, &entry_id, state).await {
@@ -149,14 +151,25 @@ async fn handle_request(request: &Request, state: &AppState, host_token: &str) -
         "search" => {
             let query = match &request.query {
                 Some(q) => q.clone(),
-                None => return ResponseData::Error { error: "缺少 query 参数".to_string() },
+                None => {
+                    return ResponseData::Error {
+                        error: "缺少 query 参数".to_string(),
+                    }
+                }
             };
 
             if !state.sessions.validate(token).await {
-                return ResponseData::Error { error: "会话已过期".to_string() };
+                return ResponseData::Error {
+                    error: "会话已过期".to_string(),
+                };
             }
 
-            match crate::db::queries::search_entries(&state.db, &query).await {
+            let db = match state.db_pool().await {
+                Ok(db) => db,
+                Err(e) => return ResponseData::Error { error: e },
+            };
+
+            match crate::db::queries::search_entries(&db, &query).await {
                 Ok(entries) => {
                     let entries_json: Vec<serde_json::Value> = entries
                         .iter()
@@ -168,23 +181,18 @@ async fn handle_request(request: &Request, state: &AppState, host_token: &str) -
                             })
                         })
                         .collect();
-                    ResponseData::Entries { entries: entries_json }
+                    ResponseData::Entries {
+                        entries: entries_json,
+                    }
                 }
-                Err(e) => ResponseData::Error { error: e.to_string() },
+                Err(e) => ResponseData::Error {
+                    error: e.to_string(),
+                },
             }
         }
 
-        _ => ResponseData::Error { error: format!("未知操作: {}", request.action) },
+        _ => ResponseData::Error {
+            error: format!("未知操作: {}", request.action),
+        },
     }
-}
-
-fn get_db_path() -> String {
-    let data_dir = dirs::data_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("keyvault");
-
-    std::fs::create_dir_all(&data_dir).ok();
-
-    let db_path = data_dir.join("keyvault.db");
-    format!("sqlite:{}?mode=rwc", db_path.display())
 }

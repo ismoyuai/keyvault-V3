@@ -29,7 +29,8 @@ pub async fn find_credentials_by_url(
 
     let hostname = extract_hostname(url).ok_or("无效的 URL")?;
 
-    let entries = queries::list_entries(&state.db, 100, 0)
+    let db = state.db_pool().await?;
+    let entries = queries::list_entries(&db, 100, 0)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -58,7 +59,7 @@ pub async fn find_credentials_by_url(
         let key_guard = state.encryption_key.read().await;
         if let Some(key) = key_guard.as_ref() {
             for entry in &entries {
-                let fields = queries::get_entry_fields(&state.db, &entry.id)
+                let fields = queries::get_entry_fields(&db, &entry.id)
                     .await
                     .unwrap_or_default();
 
@@ -90,8 +91,9 @@ pub async fn find_credentials_by_url(
 async fn get_username_for_entry(state: &AppState, entry_id: &str) -> Option<String> {
     let key_guard = state.encryption_key.read().await;
     let key = key_guard.as_ref()?;
+    let db = state.db_pool().await.ok()?;
 
-    let fields = queries::get_entry_fields(&state.db, entry_id)
+    let fields = queries::get_entry_fields(&db, entry_id)
         .await
         .ok()?;
 
@@ -118,8 +120,9 @@ pub async fn get_entry_for_fill(
 
     let key_guard = state.encryption_key.read().await;
     let key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
+    let db = state.db_pool().await?;
 
-    let fields = queries::get_entry_fields(&state.db, entry_id)
+    let fields = queries::get_entry_fields(&db, entry_id)
         .await
         .map_err(|e| e.to_string())?;
 

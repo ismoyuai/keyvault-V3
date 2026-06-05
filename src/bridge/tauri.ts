@@ -59,7 +59,7 @@ export const auth = {
   getUnlockStatus: () => ipcInvoke<UnlockStatus>('get_unlock_status'),
   setup: (password: string) => ipcInvoke<string>('setup', { password }),
   unlock: (password: string) => ipcInvoke<string>('unlock', { password }),
-  lock: () => ipcInvoke<void>('lock'),
+  lock: () => ipcInvoke<void>('lock', { sessionToken: getToken() }),
   changePassword: (oldPassword: string, newPassword: string) =>
     ipcInvoke<void>('change_password', {
       sessionToken: getToken(),
@@ -119,6 +119,12 @@ export const vault = {
 
   importVault: (data: string, format: string) =>
     ipcInvoke<number>('import_vault', { sessionToken: getToken(), data, format }),
+
+  exportToFile: (format: string) =>
+    ipcInvoke<boolean>('export_vault_to_file', { sessionToken: getToken(), format }),
+
+  importFromFile: (format: string) =>
+    ipcInvoke<number>('import_vault_from_file', { sessionToken: getToken(), format }),
 }
 
 // ============================================
@@ -169,15 +175,24 @@ export const window = {
 // 剪贴板
 // ============================================
 export const clipboard = {
-  copy: (text: string) => ipcInvoke<void>('copy_to_clipboard', { text }),
-  clear: () => ipcInvoke<void>('clear_clipboard'),
+  copy: (text: string) =>
+    ipcInvoke<void>('copy_to_clipboard', { sessionToken: getToken(), text }),
+  clear: () => ipcInvoke<void>('clear_clipboard', { sessionToken: getToken() }),
 }
 
 // ============================================
 // 应用设置
 // ============================================
 export const settings = {
-  get: (key: string) => ipcInvoke<string | null>('get_setting', { key }),
+  get: (key: string) => {
+    const args: Record<string, unknown> = { key }
+    try {
+      args.sessionToken = getToken()
+    } catch {
+      // 未解锁时仅允许后端白名单内的公开设置项
+    }
+    return ipcInvoke<string | null>('get_setting', args)
+  },
   set: (key: string, value: string) =>
     ipcInvoke<void>('set_setting', { sessionToken: getToken(), key, value }),
 }

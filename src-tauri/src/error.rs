@@ -49,6 +49,18 @@ impl From<sqlx::Error> for AppError {
     }
 }
 
+/// 将数据库错误记录到日志并返回用户友好消息
+pub fn ipc_db_err(e: sqlx::Error) -> String {
+    tracing::error!("数据库错误: {:?}", e);
+    "操作失败，请重试".to_string()
+}
+
+/// 将加密错误记录到日志并返回用户友好消息
+pub fn ipc_crypto_err(e: CryptoError) -> String {
+    tracing::error!("加密错误: {:?}", e);
+    "操作失败，请重试".to_string()
+}
+
 impl serde::Serialize for AppError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

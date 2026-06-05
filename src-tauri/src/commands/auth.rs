@@ -1,12 +1,15 @@
+use rand::rngs::OsRng;
+use rand::RngCore;
 use serde::Serialize;
 use std::sync::atomic::Ordering;
 use tauri::State;
+use zeroize::Zeroizing;
 
 use crate::crypto::kdf;
-use crate::db::queries;
+use crate::db::{self, queries};
+use crate::error::{ipc_crypto_err, ipc_db_err};
 use crate::state::AppState;
 
-/// 审计日志写入（失败静默忽略，不阻塞主操作）
 macro_rules! audit_log {
     ($db:expr, $action:expr, $entry_id:expr, $field_key:expr, $metadata:expr) => {
         let _ = queries::write_audit_log($db, $action, $entry_id, $field_key, $metadata).await;
@@ -45,64 +48,40 @@ pub async fn get_unlock_status(state: State<'_, AppState>) -> Result<UnlockStatu
 
 #[tauri::command]
 pub async fn is_initialized(state: State<'_, AppState>) -> Result<bool, String> {
-    let result = queries::get_config(&state.db, "password_hash")
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(result.is_some())
+    Ok(db::is_vault_initialized(&state.data_dir))
 }
 
 #[tauri::command]
 pub async fn setup(password: String, state: State<'_, AppState>) -> Result<String, String> {
-    use rand::RngCore;
-    use zeroize::Zeroizing;
-
-    // 检查是否已初始化
-    let existing = queries::get_config(&state.db, "password_hash")
-        .await
-        .map_err(|e| e.to_string())?;
-    if existing.is_some() {
+    if db::is_vault_initialized(&state.data_dir) {
         return Err("密码管理器已初始化，请勿重复设置".to_string());
     }
 
     let password_bytes = Zeroizing::new(password.into_bytes());
 
-    // 1. 生成 KDF salt
     let mut salt = [0u8; 16];
-    rand::thread_rng().fill_bytes(&mut salt);
+    OsRng.fill_bytes(&mut salt);
 
-    // 2. 派生加密密钥
-    let key = kdf::derive_key(&password_bytes, &salt).map_err(|e| e.to_string())?;
+    let key = kdf::derive_key(&password_bytes, &salt).map_err(ipc_crypto_err)?;
+    let hash = kdf::hash_master_password(&password_bytes).map_err(ipc_crypto_err)?;
 
-    // 3. 哈希主密码用于验证
-    let hash = kdf::hash_master_password(&password_bytes).map_err(|e| e.to_string())?;
+    state.open_database(key, salt).await?;
 
-    // 4. 存入数据库
-    queries::set_config(&state.db, "kdf_salt", &hex::encode(salt))
+    let db = state.db_pool().await?;
+    queries::set_config(&db, "kdf_salt", &hex::encode(salt))
         .await
-        .map_err(|e| e.to_string())?;
-    queries::set_config(&state.db, "password_hash", &hash)
+        .map_err(ipc_db_err)?;
+    queries::set_config(&db, "password_hash", &hash)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
 
-    // 5. 激活加密密钥
-    *state.encryption_key.write().await = Some(key);
-    *state.kdf_salt.write().await = Some(Zeroizing::new(salt));
+    audit_log!(&db, "setup");
 
-    // 6. 创建会话
-    let token = state.sessions.create().await;
-
-    // 7. 审计日志
-    audit_log!(&state.db, "setup");
-
-    Ok(token)
+    Ok(state.sessions.create().await)
 }
 
 #[tauri::command]
 pub async fn unlock(password: String, state: State<'_, AppState>) -> Result<String, String> {
-    use std::sync::atomic::Ordering;
-    use zeroize::Zeroizing;
-
-    // 检查暴力破解防护
     if state.is_unlock_locked() {
         let failures = state.unlock_failures.load(Ordering::SeqCst);
         return Err(format!(
@@ -111,18 +90,36 @@ pub async fn unlock(password: String, state: State<'_, AppState>) -> Result<Stri
         ));
     }
 
+    if !db::is_vault_initialized(&state.data_dir) {
+        return Err("密码管理器未初始化".to_string());
+    }
+
     let password_bytes = Zeroizing::new(password.into_bytes());
+    let db_path = db::db_file_path(&state.data_dir);
 
-    // 1. 获取存储的哈希
-    let hash = queries::get_config(&state.db, "password_hash")
-        .await
-        .map_err(|e| e.to_string())?
-        .ok_or("密码管理器未初始化")?;
+    let legacy_pool = if db::read_sidecar_salt(&state.data_dir)
+        .ok()
+        .flatten()
+        .is_none()
+        && db_path.exists()
+    {
+        db::open_plaintext_pool(&db_path).await.ok()
+    } else {
+        None
+    };
 
-    // 2. 验证密码
-    let valid = kdf::verify_master_password(&password_bytes, &hash).map_err(|e| e.to_string())?;
+    let salt = db::resolve_kdf_salt(&state.data_dir, legacy_pool.as_ref())
+        .await?
+        .ok_or("KDF salt 缺失")?;
 
-    if !valid {
+    if let Some(pool) = legacy_pool.as_ref() {
+        db::close_pool(pool.clone()).await;
+    }
+
+    let field_key = kdf::derive_key(&password_bytes, &salt).map_err(ipc_crypto_err)?;
+
+    if state.open_database(field_key, salt).await.is_err() {
+        state.lock().await;
         state.record_unlock_failure();
         let failures = state.unlock_failures.load(Ordering::SeqCst);
         return Err(format!(
@@ -131,39 +128,38 @@ pub async fn unlock(password: String, state: State<'_, AppState>) -> Result<Stri
         ));
     }
 
-    // 密码验证成功，重置失败计数
-    state.reset_unlock_failures();
-
-    // 3. 获取 KDF salt
-    let salt_hex = queries::get_config(&state.db, "kdf_salt")
+    let db = state.db_pool().await?;
+    let hash = queries::get_config(&db, "password_hash")
         .await
-        .map_err(|e| e.to_string())?
-        .ok_or("KDF salt 缺失")?;
+        .map_err(ipc_db_err)?
+        .ok_or("密码管理器未初始化")?;
 
-    let salt_bytes = hex::decode(&salt_hex).map_err(|e| e.to_string())?;
-    let mut salt = [0u8; 16];
-    salt.copy_from_slice(&salt_bytes[..16]);
+    let valid = kdf::verify_master_password(&password_bytes, &hash).map_err(ipc_crypto_err)?;
+    if !valid {
+        state.lock().await;
+        state.record_unlock_failure();
+        let failures = state.unlock_failures.load(Ordering::SeqCst);
+        return Err(format!(
+            "密码错误（已失败{}次，超过5次将锁定5分钟）",
+            failures
+        ));
+    }
 
-    // 4. 派生密钥
-    let key = kdf::derive_key(&password_bytes, &salt).map_err(|e| e.to_string())?;
+    state.reset_unlock_failures();
+    audit_log!(&db, "unlock");
 
-    // 5. 激活密钥
-    *state.encryption_key.write().await = Some(key);
-    *state.kdf_salt.write().await = Some(Zeroizing::new(salt));
-
-    // 6. 创建会话
-    let token = state.sessions.create().await;
-
-    // 7. 审计日志
-    audit_log!(&state.db, "unlock");
-
-    Ok(token)
+    Ok(state.sessions.create().await)
 }
 
 #[tauri::command]
-pub async fn lock(state: State<'_, AppState>) -> Result<(), String> {
-    // 审计日志（在锁定前写入，因为锁定后 db 可能不可用）
-    audit_log!(&state.db, "lock");
+pub async fn lock(session_token: String, state: State<'_, AppState>) -> Result<(), String> {
+    if !state.sessions.validate(&session_token).await {
+        return Err("会话已过期".to_string());
+    }
+
+    if let Ok(db) = state.db_pool().await {
+        audit_log!(&db, "lock");
+    }
 
     state.lock().await;
     Ok(())
@@ -180,104 +176,95 @@ pub async fn change_password(
         return Err("会话已过期".to_string());
     }
 
-    use zeroize::Zeroizing;
-
     let old_bytes = Zeroizing::new(old_password.into_bytes());
     let new_bytes = Zeroizing::new(new_password.into_bytes());
 
-    // 验证旧密码
-    let hash = queries::get_config(&state.db, "password_hash")
+    let db = state.db_pool().await?;
+    let hash = queries::get_config(&db, "password_hash")
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(ipc_db_err)?
         .ok_or("密码管理器未初始化")?;
 
-    let valid = kdf::verify_master_password(&old_bytes, &hash).map_err(|e| e.to_string())?;
+    let valid = kdf::verify_master_password(&old_bytes, &hash).map_err(ipc_crypto_err)?;
     if !valid {
         return Err("旧密码错误".to_string());
     }
 
-    // 获取当前加密密钥
     let key_guard = state.encryption_key.read().await;
     let old_key = key_guard.as_ref().ok_or("密码管理器已锁定")?;
 
-    // 生成新 salt 和密钥
-    use rand::RngCore;
     let mut new_salt = [0u8; 16];
-    rand::thread_rng().fill_bytes(&mut new_salt);
-    let new_key = kdf::derive_key(&new_bytes, &new_salt).map_err(|e| e.to_string())?;
+    OsRng.fill_bytes(&mut new_salt);
+    let new_key = kdf::derive_key(&new_bytes, &new_salt).map_err(ipc_crypto_err)?;
 
-    // 在事务中执行所有数据库操作
-    let mut tx = state.db.begin().await.map_err(|e| e.to_string())?;
+    let mut tx = db.begin().await.map_err(ipc_db_err)?;
 
-    // 重新加密所有字段
     let fields = sqlx::query_as::<_, (String, String)>("SELECT id, enc_value FROM fields")
         .fetch_all(&mut *tx)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
 
     for (id, enc_value) in fields {
         let plaintext =
-            crate::crypto::cipher::decrypt_field(old_key, &enc_value).map_err(|e| e.to_string())?;
-        let new_enc =
-            crate::crypto::cipher::encrypt_field(&new_key, &plaintext).map_err(|e| e.to_string())?;
+            crate::crypto::cipher::decrypt_field(old_key, &enc_value).map_err(ipc_crypto_err)?;
+        let new_enc = crate::crypto::cipher::encrypt_field(&new_key, &plaintext)
+            .map_err(ipc_crypto_err)?;
         sqlx::query("UPDATE fields SET enc_value = ? WHERE id = ?")
             .bind(&new_enc)
             .bind(&id)
             .execute(&mut *tx)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(ipc_db_err)?;
     }
 
-    // 重新加密 field_history
     let history = sqlx::query_as::<_, (String, String)>("SELECT id, enc_value FROM field_history")
         .fetch_all(&mut *tx)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
 
     for (id, enc_value) in history {
         let plaintext =
-            crate::crypto::cipher::decrypt_field(old_key, &enc_value).map_err(|e| e.to_string())?;
-        let new_enc =
-            crate::crypto::cipher::encrypt_field(&new_key, &plaintext).map_err(|e| e.to_string())?;
+            crate::crypto::cipher::decrypt_field(old_key, &enc_value).map_err(ipc_crypto_err)?;
+        let new_enc = crate::crypto::cipher::encrypt_field(&new_key, &plaintext)
+            .map_err(ipc_crypto_err)?;
         sqlx::query("UPDATE field_history SET enc_value = ? WHERE id = ?")
             .bind(&new_enc)
             .bind(&id)
             .execute(&mut *tx)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(ipc_db_err)?;
     }
 
-    // 更新密码哈希和 salt
-    let new_hash = kdf::hash_master_password(&new_bytes).map_err(|e| e.to_string())?;
+    let new_hash = kdf::hash_master_password(&new_bytes).map_err(ipc_crypto_err)?;
     sqlx::query("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)")
         .bind("password_hash")
         .bind(&new_hash)
         .execute(&mut *tx)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
     sqlx::query("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)")
         .bind("kdf_salt")
         .bind(&hex::encode(new_salt))
         .execute(&mut *tx)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
 
-    // 提交事务
-    tx.commit().await.map_err(|e| e.to_string())?;
-
+    tx.commit().await.map_err(ipc_db_err)?;
     drop(key_guard);
 
-    // 更新内存中的密钥
     *state.encryption_key.write().await = Some(new_key);
     *state.kdf_salt.write().await = Some(Zeroizing::new(new_salt));
+    db::write_sidecar_salt(&state.data_dir, &new_salt).map_err(|_| "保存 salt 失败".to_string())?;
 
-    // 审计日志
-    audit_log!(&state.db, "change_password");
+    let new_key_guard = state.encryption_key.read().await;
+    let new_field_key = new_key_guard.as_ref().ok_or("密码管理器已锁定")?;
+    state.rekey_database(new_field_key).await?;
+
+    audit_log!(&db, "change_password");
 
     Ok(())
 }
 
-/// 紧急擦除：验证主密码后永久删除所有本地数据
 #[tauri::command]
 pub async fn emergency_wipe(
     session_token: String,
@@ -293,23 +280,20 @@ pub async fn emergency_wipe(
         return Err("会话已过期".to_string());
     }
 
-    use zeroize::Zeroizing;
-
     let password_bytes = Zeroizing::new(password.into_bytes());
+    let db = state.db_pool().await?;
 
-    let hash = queries::get_config(&state.db, "password_hash")
+    let hash = queries::get_config(&db, "password_hash")
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(ipc_db_err)?
         .ok_or("密码管理器未初始化")?;
 
-    let valid = kdf::verify_master_password(&password_bytes, &hash).map_err(|e| e.to_string())?;
+    let valid = kdf::verify_master_password(&password_bytes, &hash).map_err(ipc_crypto_err)?;
     if !valid {
         return Err("主密码错误".to_string());
     }
 
-    audit_log!(&state.db, "emergency_wipe");
-
-    state.lock().await;
+    audit_log!(&db, "emergency_wipe");
 
     let tables = [
         "field_history",
@@ -322,10 +306,17 @@ pub async fn emergency_wipe(
     ];
     for table in tables {
         sqlx::query(&format!("DELETE FROM {table}"))
-            .execute(&state.db)
+            .execute(&db)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(ipc_db_err)?;
     }
+
+    state.lock().await;
+
+    let db_path = db::db_file_path(&state.data_dir);
+    let salt_path = db::salt_file_path(&state.data_dir);
+    let _ = std::fs::remove_file(db_path);
+    let _ = std::fs::remove_file(salt_path);
 
     Ok(())
 }

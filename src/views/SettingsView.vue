@@ -55,16 +55,8 @@ async function handleBreachCheck() {
 
 async function handleExport() {
   try {
-    const data = await vaultBridge.exportVault('json')
-    const { save } = await import('@tauri-apps/plugin-dialog')
-    const path = await save({
-      filters: [{ name: 'JSON', extensions: ['json'] }],
-    })
-    if (path) {
-      const { writeTextFile } = await import('@tauri-apps/plugin-fs')
-      await writeTextFile(path, data)
-      toast.success('导出成功')
-    }
+    const exported = await vaultBridge.exportToFile('json')
+    if (exported) toast.success('导出成功')
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : '导出失败'
     toast.error(message)
@@ -74,17 +66,11 @@ async function handleExport() {
 async function handleImport() {
   importing.value = true
   try {
-    const { open } = await import('@tauri-apps/plugin-dialog')
-    const path = await open({
-      filters: [{ name: 'JSON', extensions: ['json'] }],
-      multiple: false,
-    })
-    if (!path || typeof path !== 'string') return
-    const { readTextFile } = await import('@tauri-apps/plugin-fs')
-    const content = await readTextFile(path)
-    const count = await vaultBridge.importVault(content, 'json')
-    await vaultStore.loadEntries()
-    toast.success(`成功导入 ${count} 条记录`)
+    const count = await vaultBridge.importFromFile('json')
+    if (count > 0) {
+      await vaultStore.loadEntries()
+      toast.success(`成功导入 ${count} 条记录`)
+    }
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : '导入失败'
     toast.error(message)

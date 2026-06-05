@@ -23,9 +23,10 @@ pub async fn list_groups(
     if !state.sessions.validate(&session_token).await {
         return Err("会话已过期".to_string());
     }
-    let rows = queries::list_groups(&state.db)
+    let db = state.db_pool().await?;
+    let rows = queries::list_groups(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|_| "操作失败".to_string())?;
     Ok(rows.into_iter().map(|r| GroupInfo {
         id: r.id,
         name: r.name,
@@ -47,6 +48,7 @@ pub async fn create_group(
     if !state.sessions.validate(&session_token).await {
         return Err("会话已过期".to_string());
     }
+    let db = state.db_pool().await?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().timestamp();
     sqlx::query(
@@ -57,9 +59,9 @@ pub async fn create_group(
     .bind(&icon)
     .bind(now)
     .bind(now)
-    .execute(&state.db)
+    .execute(&db)
     .await
-    .map_err(|e| e.to_string())?;
+    .map_err(|_| "操作失败".to_string())?;
     Ok(id)
 }
 
@@ -74,15 +76,16 @@ pub async fn update_group(
     if !state.sessions.validate(&session_token).await {
         return Err("会话已过期".to_string());
     }
+    let db = state.db_pool().await?;
     let now = chrono::Utc::now().timestamp();
     sqlx::query("UPDATE groups SET name = ?, icon = ?, updated_at = ? WHERE id = ?")
         .bind(&name)
         .bind(&icon)
         .bind(now)
         .bind(&group_id)
-        .execute(&state.db)
+        .execute(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|_| "操作失败".to_string())?;
     Ok(())
 }
 
@@ -95,10 +98,11 @@ pub async fn delete_group(
     if !state.sessions.validate(&session_token).await {
         return Err("会话已过期".to_string());
     }
+    let db = state.db_pool().await?;
     sqlx::query("DELETE FROM groups WHERE id = ?")
         .bind(&group_id)
-        .execute(&state.db)
+        .execute(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|_| "操作失败".to_string())?;
     Ok(())
 }

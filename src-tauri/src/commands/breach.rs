@@ -1,7 +1,9 @@
 use serde::Serialize;
 use sha1::{Digest, Sha1};
 use tauri::State;
+use zeroize::Zeroizing;
 
+use crate::error::ipc_db_err;
 use crate::state::AppState;
 
 #[derive(Serialize)]
@@ -22,42 +24,40 @@ pub async fn check_password_breach(
         return Err("会话已过期".to_string());
     }
 
-    // 1. 计算 SHA1 哈希
+    let password_bytes = Zeroizing::new(password.into_bytes());
+    let db = state.db_pool().await?;
+
     let mut hasher = Sha1::new();
-    hasher.update(password.as_bytes());
+    hasher.update(password_bytes.as_slice());
     let hash = format!("{:X}", hasher.finalize());
 
     let prefix = &hash[..5];
     let suffix = &hash[5..];
 
-    // 2. 检查缓存
     let cached: Option<(String, i64)> = sqlx::query_as(
         "SELECT result_json, cached_at FROM breach_cache WHERE hash_prefix = ?",
     )
     .bind(prefix)
-    .fetch_optional(&state.db)
+    .fetch_optional(&db)
     .await
-    .map_err(|e| e.to_string())?;
+    .map_err(ipc_db_err)?;
 
     let now = chrono::Utc::now().timestamp();
 
-    // 缓存有效期 7 天
     if let Some((result_json, cached_at)) = cached {
         if now - cached_at < 7 * 24 * 3600 {
             return parse_breach_result(&result_json, suffix);
         }
     }
 
-    // 3. 查询 HIBP API（仅发送前 5 字符）
     let url = format!("https://api.pwnedpasswords.com/range/{}", prefix);
     let response = reqwest::get(&url)
         .await
         .map_err(|_| "网络请求失败，跳过泄露检测".to_string())?
         .text()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|_| "网络请求失败".to_string())?;
 
-    // 4. 缓存结果
     let cache_json = serde_json::json!({ "lines": response });
     sqlx::query(
         "INSERT OR REPLACE INTO breach_cache (hash_prefix, result_json, cached_at) VALUES (?, ?, ?)",
@@ -65,11 +65,10 @@ pub async fn check_password_breach(
     .bind(prefix)
     .bind(cache_json.to_string())
     .bind(now)
-    .execute(&state.db)
+    .execute(&db)
     .await
     .ok();
 
-    // 5. 本地比对
     for line in response.lines() {
         if let Some((s, count)) = line.split_once(':') {
             if s.trim().eq_ignore_ascii_case(suffix) {
@@ -89,7 +88,7 @@ pub async fn check_password_breach(
 }
 
 fn parse_breach_result(json: &str, suffix: &str) -> Result<BreachResult, String> {
-    let v: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
+    let v: serde_json::Value = serde_json::from_str(json).map_err(|_| "缓存数据无效".to_string())?;
     let lines = v["lines"].as_str().unwrap_or("");
     for line in lines.lines() {
         if let Some((s, count)) = line.split_once(':') {

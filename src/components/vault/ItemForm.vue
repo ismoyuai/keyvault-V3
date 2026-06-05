@@ -33,8 +33,28 @@ const title = ref(props.editEntry?.title || '')
 const subtitle = ref(props.editEntry?.subtitle || '')
 const tags = ref(props.editEntry?.tags.join(', ') || '')
 const fields = ref<FieldInput[]>([])
+const isLoadingFields = ref(false)
 
-watch(() => props.open, (isOpen) => {
+async function loadEditFields(entryId: string) {
+  isLoadingFields.value = true
+  fields.value = []
+  try {
+    const secrets = await vaultBridge.getEntrySecrets(entryId)
+    fields.value = secrets.fields.map(f => ({
+      fieldKey: f.fieldKey,
+      fieldType: f.fieldType,
+      value: f.value,
+      isSensitive: f.isSensitive,
+    }))
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : '加载字段失败'
+    toast.error(message)
+  } finally {
+    isLoadingFields.value = false
+  }
+}
+
+watch(() => props.open, async (isOpen) => {
   if (isOpen) {
     if (props.editEntry) {
       step.value = 'form'
@@ -42,7 +62,7 @@ watch(() => props.open, (isOpen) => {
       title.value = props.editEntry.title
       subtitle.value = props.editEntry.subtitle || ''
       tags.value = props.editEntry.tags.join(', ')
-      fields.value = []
+      await loadEditFields(props.editEntry.id)
     } else {
       resetForm()
     }
@@ -75,6 +95,8 @@ function removeField(index: number) {
 }
 
 async function handleSave() {
+  if (isLoadingFields.value) return
+
   if (!title.value.trim()) {
     toast.error('请输入标题')
     return
@@ -111,12 +133,13 @@ async function handleSave() {
 }
 
 function resetForm() {
-  step.value = props.editEntry ? 'form' : 'type'
+  step.value = 'type'
   title.value = ''
   subtitle.value = ''
   tags.value = ''
   fields.value = []
   selectedType.value = 'login'
+  isLoadingFields.value = false
 }
 </script>
 
@@ -131,6 +154,7 @@ function resetForm() {
     <EntryTypePicker v-if="step === 'type'" @select="selectType" />
 
     <div v-else class="form-body">
+      <p v-if="isLoadingFields" class="fields-loading">正在加载字段…</p>
       <KvInput
         v-model="title"
         label="标题"
@@ -202,7 +226,7 @@ function resetForm() {
           返回
         </KvButton>
         <KvButton variant="ghost" @click="emit('close')">取消</KvButton>
-        <KvButton @click="handleSave">
+        <KvButton :disabled="isLoadingFields" @click="handleSave">
           {{ editEntry ? '保存' : '创建' }}
         </KvButton>
       </template>
@@ -220,6 +244,11 @@ function resetForm() {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.fields-loading {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 .fields-section {

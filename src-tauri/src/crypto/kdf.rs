@@ -1,9 +1,13 @@
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
 use argon2::{Algorithm, Argon2, Params, Version};
+use hkdf::Hkdf;
 use rand::rngs::OsRng;
+use sha2::Sha256;
 use zeroize::Zeroizing;
 
 use crate::error::CryptoError;
+
+const DB_KEY_INFO: &[u8] = b"keyvault-v3-sqlcipher";
 
 /// Argon2id 参数锁定
 const MEMORY_COST: u32 = 65536;
@@ -36,6 +40,15 @@ pub fn hash_master_password(password: &[u8]) -> Result<String, CryptoError> {
         .map_err(|_| CryptoError::HashError)?
         .to_string();
     Ok(hash)
+}
+
+/// 从字段加密密钥派生 SQLCipher 数据库密钥（HKDF 子密钥）
+pub fn derive_db_key(field_key: &[u8; 32]) -> Result<Zeroizing<[u8; 32]>, CryptoError> {
+    let hk = Hkdf::<Sha256>::new(None, field_key);
+    let mut db_key = Zeroizing::new([0u8; 32]);
+    hk.expand(DB_KEY_INFO, db_key.as_mut())
+        .map_err(|_| CryptoError::KdfError)?;
+    Ok(db_key)
 }
 
 /// 验证主密码

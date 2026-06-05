@@ -81,16 +81,17 @@ fn decrypt_sync_credential(key: &[u8; 32], stored: &str) -> Result<String, Strin
 }
 
 async fn load_webdav_config(state: &AppState, key: &[u8; 32]) -> Result<WebDavConfig, String> {
-    let url = queries::get_config(&state.db, KEY_URL)
+    let db = state.db_pool().await?;
+    let url = queries::get_config(&db, KEY_URL)
         .await
         .map_err(|e| e.to_string())?
         .filter(|s| !s.is_empty())
         .ok_or("请先配置 WebDAV 同步")?;
-    let username = queries::get_config(&state.db, KEY_USERNAME)
+    let username = queries::get_config(&db, KEY_USERNAME)
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
-    let stored_password = queries::get_config(&state.db, KEY_PASSWORD)
+    let stored_password = queries::get_config(&db, KEY_PASSWORD)
         .await
         .map_err(|e| e.to_string())?
         .ok_or("请先配置 WebDAV 同步")?;
@@ -103,24 +104,26 @@ async fn load_webdav_config(state: &AppState, key: &[u8; 32]) -> Result<WebDavCo
 }
 
 async fn get_or_create_device_id(state: &AppState) -> Result<String, String> {
-    if let Some(id) = queries::get_config(&state.db, KEY_DEVICE_ID)
+    let db = state.db_pool().await?;
+    if let Some(id) = queries::get_config(&db, KEY_DEVICE_ID)
         .await
         .map_err(|e| e.to_string())?
     {
         return Ok(id);
     }
     let id = uuid::Uuid::new_v4().to_string();
-    queries::set_config(&state.db, KEY_DEVICE_ID, &id)
+    queries::set_config(&db, KEY_DEVICE_ID, &id)
         .await
         .map_err(|e| e.to_string())?;
     Ok(id)
 }
 
 async fn export_sync_entries(state: &AppState, key: &[u8; 32]) -> Result<Vec<SyncEntry>, String> {
-    let entries = queries::list_all_entries_for_sync(&state.db)
+    let db = state.db_pool().await?;
+    let entries = queries::list_all_entries_for_sync(&db)
         .await
         .map_err(|e| e.to_string())?;
-    let groups = queries::list_groups(&state.db)
+    let groups = queries::list_groups(&db)
         .await
         .map_err(|e| e.to_string())?;
     let group_map: std::collections::HashMap<String, String> =
@@ -128,7 +131,7 @@ async fn export_sync_entries(state: &AppState, key: &[u8; 32]) -> Result<Vec<Syn
 
     let mut result = Vec::new();
     for entry in entries {
-        let fields = queries::get_entry_fields(&state.db, &entry.id)
+        let fields = queries::get_entry_fields(&db, &entry.id)
             .await
             .map_err(|e| e.to_string())?;
         let mut sync_fields = Vec::new();
@@ -168,12 +171,13 @@ async fn upsert_sync_entry(
     key: &[u8; 32],
     entry: &SyncEntry,
 ) -> Result<(), String> {
+    let db = state.db_pool().await?;
     if entry.fields.is_empty() && entry.deleted_at.is_none() {
         return Ok(());
     }
 
     let group_id = if let Some(ref name) = entry.group_name {
-        let groups = queries::list_groups(&state.db)
+        let groups = queries::list_groups(&db)
             .await
             .map_err(|e| e.to_string())?;
         if let Some(g) = groups.iter().find(|g| &g.name == name) {
@@ -188,7 +192,7 @@ async fn upsert_sync_entry(
             .bind(name)
             .bind(now)
             .bind(now)
-            .execute(&state.db)
+            .execute(&db)
             .await
             .map_err(|e| e.to_string())?;
             Some(gid)
@@ -200,7 +204,7 @@ async fn upsert_sync_entry(
     let tags = entry.tags.clone().unwrap_or_else(|| "[]".to_string());
     let exists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM entries WHERE id = ?")
         .bind(&entry.id)
-        .fetch_one(&state.db)
+        .fetch_one(&db)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -217,14 +221,14 @@ async fn upsert_sync_entry(
         .bind(entry.updated_at)
         .bind(entry.deleted_at)
         .bind(&entry.id)
-        .execute(&state.db)
+        .execute(&db)
         .await
         .map_err(|e| e.to_string())?;
 
         if !entry.fields.is_empty() {
             sqlx::query("DELETE FROM fields WHERE entry_id = ?")
                 .bind(&entry.id)
-                .execute(&state.db)
+                .execute(&db)
                 .await
                 .map_err(|e| e.to_string())?;
         }
@@ -243,7 +247,7 @@ async fn upsert_sync_entry(
         .bind(entry.favorited as i32)
         .bind(now)
         .bind(now)
-        .execute(&state.db)
+        .execute(&db)
         .await
         .map_err(|e| e.to_string())?;
     } else {
@@ -262,7 +266,7 @@ async fn upsert_sync_entry(
         .bind(now)
         .bind(now)
         .bind(entry.deleted_at)
-        .execute(&state.db)
+        .execute(&db)
         .await
         .map_err(|e| e.to_string())?;
     }
@@ -285,7 +289,7 @@ async fn upsert_sync_entry(
         .bind(&enc_value)
         .bind(field.is_sensitive as i32)
         .bind(i as i32)
-        .execute(&state.db)
+        .execute(&db)
         .await
         .map_err(|e| e.to_string())?;
     }
@@ -302,22 +306,23 @@ pub async fn get_sync_config(
         return Err("会话已过期".to_string());
     }
 
-    let url = queries::get_config(&state.db, KEY_URL)
+    let db = state.db_pool().await?;
+    let url = queries::get_config(&db, KEY_URL)
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
-    let username = queries::get_config(&state.db, KEY_USERNAME)
+    let username = queries::get_config(&db, KEY_USERNAME)
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
-    let password = queries::get_config(&state.db, KEY_PASSWORD)
+    let password = queries::get_config(&db, KEY_PASSWORD)
         .await
         .map_err(|e| e.to_string())?;
-    let last_sync = queries::get_config(&state.db, KEY_LAST_SYNC)
+    let last_sync = queries::get_config(&db, KEY_LAST_SYNC)
         .await
         .map_err(|e| e.to_string())?
         .and_then(|s| s.parse().ok());
-    let device_id = queries::get_config(&state.db, KEY_DEVICE_ID)
+    let device_id = queries::get_config(&db, KEY_DEVICE_ID)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -340,23 +345,24 @@ pub async fn set_sync_config(
         return Err("会话已过期".to_string());
     }
 
-    queries::set_config(&state.db, KEY_URL, input.url.trim())
+    let db = state.db_pool().await?;
+    queries::set_config(&db, KEY_URL, input.url.trim())
         .await
         .map_err(|e| e.to_string())?;
-    queries::set_config(&state.db, KEY_USERNAME, &input.username)
+    queries::set_config(&db, KEY_USERNAME, &input.username)
         .await
         .map_err(|e| e.to_string())?;
     if !input.password.is_empty() {
         let key_guard = state.encryption_key.read().await;
         let key = key_guard.as_ref().ok_or("请先解锁密码管理器")?;
         let encrypted = encrypt_sync_credential(key, &input.password)?;
-        queries::set_config(&state.db, KEY_PASSWORD, &encrypted)
+        queries::set_config(&db, KEY_PASSWORD, &encrypted)
             .await
             .map_err(|e| e.to_string())?;
     }
 
     let _ = get_or_create_device_id(&state).await?;
-    audit_log!(&state.db, "sync_config");
+    audit_log!(&db, "sync_config");
     Ok(())
 }
 
@@ -410,12 +416,13 @@ pub async fn sync_push(
 
     webdav::upload(&config, REMOTE_PATH, &encrypted).await?;
 
+    let db = state.db_pool().await?;
     let now = chrono::Utc::now().timestamp();
-    queries::set_config(&state.db, KEY_LAST_SYNC, &now.to_string())
+    queries::set_config(&db, KEY_LAST_SYNC, &now.to_string())
         .await
         .map_err(|e| e.to_string())?;
 
-    audit_log!(&state.db, "sync_push");
+    audit_log!(&db, "sync_push");
 
     Ok(SyncPushResult {
         entries_sent: payload.data.entries.len(),
@@ -447,11 +454,12 @@ pub async fn sync_pull(
 
     let payload = engine::deserialize_payload(key, &content)?;
 
+    let db = state.db_pool().await?;
     let mut applied = 0usize;
     for remote_entry in &payload.data.entries {
         let local_updated: Option<i64> = sqlx::query_scalar("SELECT updated_at FROM entries WHERE id = ?")
             .bind(&remote_entry.id)
-            .fetch_optional(&state.db)
+            .fetch_optional(&db)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -468,11 +476,11 @@ pub async fn sync_pull(
     }
 
     let now = chrono::Utc::now().timestamp();
-    queries::set_config(&state.db, KEY_LAST_SYNC, &now.to_string())
+    queries::set_config(&db, KEY_LAST_SYNC, &now.to_string())
         .await
         .map_err(|e| e.to_string())?;
 
-    audit_log!(&state.db, "sync_pull");
+    audit_log!(&db, "sync_pull");
 
     Ok(SyncPullResult {
         entries_merged: applied,
@@ -493,7 +501,8 @@ pub async fn get_sync_status(
     let key = key_guard.as_ref().ok_or("请先解锁密码管理器")?;
     let config = load_webdav_config(&state, key).await?;
     let last_remote = webdav::get_last_modified(&config, REMOTE_PATH).await.ok().flatten();
-    let last_local = queries::get_config(&state.db, KEY_LAST_SYNC)
+    let db = state.db_pool().await?;
+    let last_local = queries::get_config(&db, KEY_LAST_SYNC)
         .await
         .map_err(|e| e.to_string())?
         .and_then(|s| s.parse().ok());
