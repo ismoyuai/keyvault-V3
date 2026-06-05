@@ -2,6 +2,7 @@ use serde::Serialize;
 
 use crate::crypto::cipher;
 use crate::db::queries;
+use crate::error::{ipc_crypto_err, ipc_db_err};
 use crate::state::AppState;
 
 #[derive(Serialize)]
@@ -32,7 +33,7 @@ pub async fn find_credentials_by_url(
     let db = state.db_pool().await?;
     let entries = queries::list_all_active_entries(&db)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
 
     let mut matches: Vec<CredentialMatch> = Vec::new();
 
@@ -124,14 +125,14 @@ pub async fn get_entry_for_fill(
 
     let fields = queries::get_entry_fields(&db, entry_id)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(ipc_db_err)?;
 
     let mut username: Option<String> = None;
     let mut password: Option<String> = None;
 
     for field in &fields {
         let decrypted = cipher::decrypt_field(key, &field.enc_value)
-            .map_err(|e| e.to_string())?;
+            .map_err(ipc_crypto_err)?;
         let value = String::from_utf8(decrypted.to_vec())
             .map_err(|_| "解码失败".to_string())?;
 

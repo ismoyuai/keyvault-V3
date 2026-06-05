@@ -113,9 +113,14 @@ pub fn deserialize_payload(key: &[u8; 32], content: &str) -> Result<SyncPayload,
         return Err("远程同步文件版本不支持".to_string());
     }
 
-    let decrypted = cipher::decrypt_field(key, &blob.ciphertext).map_err(|e| e.to_string())?;
-    let payload: SyncPayload =
-        serde_json::from_slice(&decrypted).map_err(|e| format!("解密数据解析失败: {}", e))?;
+    let decrypted = cipher::decrypt_field(key, &blob.ciphertext).map_err(|e| {
+        tracing::error!("同步解密失败: {:?}", e);
+        "远程同步文件解密失败".to_string()
+    })?;
+    let payload: SyncPayload = serde_json::from_slice(&decrypted).map_err(|e| {
+        tracing::error!("同步载荷解析失败: {:?}", e);
+        "远程同步数据无效".to_string()
+    })?;
     verify_payload(&payload)?;
     Ok(payload)
 }

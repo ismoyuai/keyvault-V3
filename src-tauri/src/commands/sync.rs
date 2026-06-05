@@ -462,7 +462,10 @@ pub async fn sync_pull(
         });
     };
 
-    let payload = engine::deserialize_payload(key, &content)?;
+    let payload = engine::deserialize_payload(key, &content).map_err(|e| {
+        ipc_sync_err("远程同步文件解密失败", e);
+        "无法解密远程同步文件，请确认主密码与 WebDAV 配置正确".to_string()
+    })?;
 
     let db = state.db_pool().await?;
     let mut applied = 0usize;

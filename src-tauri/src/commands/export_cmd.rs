@@ -237,13 +237,10 @@ async fn import_vault_data(
         .map_err(|_| "导入失败".to_string())?;
 
         for (i, import_field) in import_entry.fields.iter().enumerate() {
+            // 与 create_entry 一致：enc_value 始终加密；is_sensitive 仅作 UI 元数据
             let is_sensitive = import_field.is_sensitive.unwrap_or(true);
-            let enc_value = if is_sensitive {
-                cipher::encrypt_field(key, import_field.value.as_bytes())
-                    .map_err(|_| "导入失败".to_string())?
-            } else {
-                import_field.value.clone()
-            };
+            let enc_value = cipher::encrypt_field(key, import_field.value.as_bytes())
+                .map_err(|_| "导入失败".to_string())?;
             let field_id = uuid::Uuid::new_v4().to_string();
             let field_type = import_field
                 .field_type
@@ -322,4 +319,37 @@ pub async fn import_vault_from_file(
     let content = std::fs::read_to_string(&path).map_err(|_| "读取文件失败".to_string())?;
 
     import_vault_data(&state, key, &content, &format).await
+}
+
+#[cfg(test)]
+mod import_encrypt_tests {
+    use crate::crypto::cipher;
+    use crate::import::browser_csv;
+
+    /// 回归：非敏感字段也必须加密存储，否则 get_entry_secrets 解密会失败
+    #[test]
+    fn csv_import_fields_encrypt_and_decrypt() {
+        let key = [7u8; 32];
+        let csv = r#"name,url,username,password
+Test,https://t.com,user,pass"#;
+        let entries = browser_csv::parse_browser_csv(csv).unwrap();
+        let entry = &entries[0];
+
+        for import_field in &entry.fields {
+            let enc_value = cipher::encrypt_field(&key, import_field.value.as_bytes()).unwrap();
+            let decrypted = cipher::decrypt_field(&key, &enc_value).unwrap();
+            assert_eq!(
+                String::from_utf8(decrypted.to_vec()).unwrap(),
+                import_field.value
+            );
+            // 旧实现将 is_sensitive=false 的字段明文写入 enc_value
+            if import_field.is_sensitive == Some(false) {
+                assert!(
+                    cipher::decrypt_field(&key, &import_field.value).is_err(),
+                    "plaintext enc_value must not decrypt: {}",
+                    import_field.field_key
+                );
+            }
+        }
+    }
 }
